@@ -1,0 +1,17 @@
+-r src/requirements.txt
+aws-cdk-lib
+constructs
+openpyxl
+# https://github.com/jazzband/pip-tools/issues/204#issuecomment-785420275
+-e file:.
+
+-r src/requirements.txt
+
+# Build Tools
+black
+isort
+mypy
+pip-tools
+tox
+pip!=25.3
+

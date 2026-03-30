@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+case "$1" in
+    build)
+        tox -e build
+        ;;
+    clean)
+        rm -rf build
+        rm -rf cdk.out
+        rm -f coverage.xml
+        rm -rf htmlcov
+        ;;
+    compile-reqs)
+        # Compile requirements; order is important
+        export CUSTOM_COMPILE_COMMAND="./pu compile-reqs"
+        pip_compile="pip-compile --no-annotate --no-emit-index-url --upgrade --allow-unsafe"
+        $pip_compile src/requirements.in
+        $pip_compile requirements.in
+        ;;
+    format)
+        tox -e format
+        ;;
+    generate-lambda-asset)
+        pip install -r requirements.txt -t /asset-output
+        cp -r pu_skill_builder /asset-output
+        ;;
+    install)
+        pip install -r requirements.txt
+        ;;
+    sync)
+        pip-sync
+        ;;
+    test)
+        tox -e test
+        ;;
+    test-integ)
+        export PU_INTEG_TESTS_TARGET_ACCOUNT_ID="$2"
+        tox -e test_integ
+        ;;
+    test-integ-dev)
+        export PU_INTEG_TESTS_TARGET_ACCOUNT_ID="$PU_DEV_AWS_ACCOUNT_ID"
+        tox -e test_integ
+        ;;
+    *)
+        echo Invalid argument: $1
+        exit 1
+        ;;
+esac

@@ -1,0 +1,10 @@
+[tool.black]
+line-length = 120
+
+[tool.isort]
+known_first_party = ["lmjm"]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+disable_error_code = ["no-any-return", "import-untyped", "misc", "untyped-decorator"]
