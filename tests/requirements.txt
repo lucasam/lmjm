@@ -1,0 +1,8 @@
+#
+# Test dependencies for lmjm
+#
+-r ../src/requirements.txt
+pytest
+pytest-cov
+coverage
+moto[dynamodb]

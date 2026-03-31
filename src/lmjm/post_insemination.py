@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 import boto3
 
@@ -25,7 +25,7 @@ class PostInseminationRequest:
     note: Optional[str] = None
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     ear_tag = event["pathParameters"]["animal_id"]
     request = load_data_class_from_dict(json.loads(event["body"]), PostInseminationRequest)
 

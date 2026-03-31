@@ -149,6 +149,7 @@ def _create_base_schema(data_class: type) -> type[Schema]:
 
     return BaseSchema
 
+
 def _monkey_patch_desert() -> None:
     """Apply a patch that allows us to skip None values when serializing data classes.
 

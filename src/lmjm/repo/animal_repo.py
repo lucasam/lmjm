@@ -1,10 +1,14 @@
 from typing import Optional
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 from mypy_boto3_dynamodb.service_resource import Table
 
 from lmjm.model import Animal
-from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.marshmallow_serializer import (
+    load_data_class_from_dict,
+    load_data_class_from_dict_list,
+    serialize_to_dict,
+)
 
 
 class AnimalRepo:
@@ -28,6 +32,16 @@ class AnimalRepo:
         if not items:
             return None
         return load_data_class_from_dict(items[0], Animal)
+
+    def list_cattle(self) -> list[Animal]:
+        items: list[dict] = []  # type: ignore[type-arg]
+        filter_expr = Key("sk").eq("Animal") & Attr("species").eq("cattle")
+        response = self.table.scan(FilterExpression=filter_expr)
+        items.extend(response.get("Items", []))
+        while "LastEvaluatedKey" in response:
+            response = self.table.scan(FilterExpression=filter_expr, ExclusiveStartKey=response["LastEvaluatedKey"])
+            items.extend(response.get("Items", []))
+        return load_data_class_from_dict_list(items, Animal)
 
     def update(self, animal: Animal) -> None:
         self.table.put_item(Item=serialize_to_dict(animal))

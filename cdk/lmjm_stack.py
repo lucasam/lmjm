@@ -1,4 +1,17 @@
-from aws_cdk import Stack, aws_dynamodb as dynamodb, aws_lambda as _lambda
+from aws_cdk import (
+    CfnOutput,
+    Duration,
+    SecretValue,
+    Stack,
+)
+from aws_cdk import aws_apigateway as apigw
+from aws_cdk import aws_cloudfront as cloudfront
+from aws_cdk import aws_cloudfront_origins as origins
+from aws_cdk import aws_cognito as cognito
+from aws_cdk import aws_dynamodb as dynamodb
+from aws_cdk import aws_lambda as _lambda
+from aws_cdk import aws_s3 as s3
+from aws_cdk import aws_s3_deployment as s3deploy
 from constructs import Construct
 
 
@@ -15,6 +28,140 @@ class LmjmStack(Stack):
         )
 
         table = dynamodb.Table.from_table_name(self, "GadoTable", "gado")
+
+        # --- S3 + CloudFront for frontend hosting ---
+
+        frontend_bucket = s3.Bucket(
+            self,
+            "FrontendBucket",
+            bucket_name=f"lmjm-frontend-{Stack.of(self).account}",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+        )
+
+        distribution = cloudfront.Distribution(
+            self,
+            "FrontendDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3BucketOrigin.with_origin_access_control(frontend_bucket),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            ),
+            default_root_object="index.html",
+            error_responses=[
+                cloudfront.ErrorResponse(
+                    http_status=403,
+                    response_http_status=200,
+                    response_page_path="/index.html",
+                    ttl=Duration.seconds(0),
+                ),
+                cloudfront.ErrorResponse(
+                    http_status=404,
+                    response_http_status=200,
+                    response_page_path="/index.html",
+                    ttl=Duration.seconds(0),
+                ),
+            ],
+        )
+
+        s3deploy.BucketDeployment(
+            self,
+            "FrontendDeployment",
+            sources=[s3deploy.Source.asset("frontend/dist")],
+            destination_bucket=frontend_bucket,
+            distribution=distribution,
+        )
+
+        CfnOutput(
+            self,
+            "CloudFrontDomainName",
+            value=distribution.distribution_domain_name,
+            description="CloudFront distribution domain name for the frontend",
+        )
+
+        # --- Cognito User Pool with Google IdP ---
+
+        pre_signup_lambda = _lambda.Function(
+            self,
+            "PreSignupFunction",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.pre_signup.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(pre_signup_lambda)
+
+        user_pool = cognito.UserPool(
+            self,
+            "LmjmUserPool",
+            self_sign_up_enabled=False,
+            lambda_triggers=cognito.UserPoolTriggers(
+                pre_sign_up=pre_signup_lambda,
+            ),
+        )
+
+        google_idp = cognito.UserPoolIdentityProviderGoogle(
+            self,
+            "GoogleIdP",
+            user_pool=user_pool,
+            client_id="PLACEHOLDER_GOOGLE_CLIENT_ID",
+            client_secret_value=SecretValue.unsafe_plain_text("PLACEHOLDER_GOOGLE_CLIENT_SECRET"),
+            scopes=["openid", "email", "profile"],
+            attribute_mapping=cognito.AttributeMapping(
+                email=cognito.ProviderAttribute.GOOGLE_EMAIL,
+                fullname=cognito.ProviderAttribute.GOOGLE_NAME,
+            ),
+        )
+
+        user_pool_client = cognito.UserPoolClient(
+            self,
+            "LmjmUserPoolClient",
+            user_pool=user_pool,
+            o_auth=cognito.OAuthSettings(
+                flows=cognito.OAuthFlows(authorization_code_grant=True),
+                scopes=[
+                    cognito.OAuthScope.OPENID,
+                    cognito.OAuthScope.EMAIL,
+                    cognito.OAuthScope.PROFILE,
+                ],
+                callback_urls=[f"https://{distribution.distribution_domain_name}/callback"],
+                logout_urls=[f"https://{distribution.distribution_domain_name}"],
+            ),
+            supported_identity_providers=[
+                cognito.UserPoolClientIdentityProvider.GOOGLE,
+            ],
+            auth_flows=cognito.AuthFlow(user_srp=True),
+            refresh_token_validity=Duration.days(30),
+        )
+        user_pool_client.node.add_dependency(google_idp)
+
+        user_pool_domain = cognito.UserPoolDomain(
+            self,
+            "LmjmUserPoolDomain",
+            user_pool=user_pool,
+            cognito_domain=cognito.CognitoDomainOptions(
+                domain_prefix="lmjm",
+            ),
+        )
+
+        CfnOutput(
+            self,
+            "UserPoolId",
+            value=user_pool.user_pool_id,
+            description="Cognito User Pool ID",
+        )
+
+        CfnOutput(
+            self,
+            "UserPoolClientId",
+            value=user_pool_client.user_pool_client_id,
+            description="Cognito User Pool Client ID",
+        )
+
+        CfnOutput(
+            self,
+            "UserPoolDomain",
+            value=user_pool_domain.domain_name,
+            description="Cognito User Pool Domain",
+        )
 
         post_diagnostic = _lambda.Function(
             self,
@@ -35,3 +182,466 @@ class LmjmStack(Stack):
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_insemination)
+
+        # --- API Gateway REST API with Cognito Authorizer ---
+
+        cloudfront_origin = f"https://{distribution.distribution_domain_name}"
+
+        api = apigw.RestApi(
+            self,
+            "LmjmApi",
+            rest_api_name="LMJM API",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=[cloudfront_origin],
+                allow_methods=apigw.Cors.ALL_METHODS,
+                allow_headers=["Content-Type", "Authorization"],
+            ),
+        )
+
+        cfn_authorizer = apigw.CfnAuthorizer(
+            self,
+            "LmjmCognitoAuthorizer",
+            name="LmjmCognitoAuthorizer",
+            rest_api_id=api.rest_api_id,
+            type="COGNITO_USER_POOLS",
+            identity_source="method.request.header.Authorization",
+            provider_arns=[user_pool.user_pool_arn],
+        )
+
+        # Create top-level resources for cattle and pig routes
+        cattle_resource = api.root.add_resource("cattle")
+        pigs_resource = api.root.add_resource("pigs")
+
+        def add_cognito_method(
+            resource: apigw.Resource,
+            http_method: str,
+            integration: apigw.LambdaIntegration,
+        ) -> apigw.Method:
+            """Add a method with CfnAuthorizer-based Cognito auth via property overrides."""
+            method = resource.add_method(http_method, integration)
+            method_resource = method.node.find_child("Resource")
+            method_resource.add_property_override("AuthorizationType", "COGNITO_USER_POOLS")
+            method_resource.add_property_override("AuthorizerId", {"Ref": cfn_authorizer.logical_id})
+            return method
+
+        # --- Cattle GET Lambdas ---
+
+        get_cattle_animals = _lambda.Function(
+            self,
+            "GetCattleAnimalsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_cattle_animals.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_cattle_animals)
+
+        get_cattle_animal = _lambda.Function(
+            self,
+            "GetCattleAnimalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_cattle_animal.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_cattle_animal)
+
+        get_inseminations = _lambda.Function(
+            self,
+            "GetInseminationsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_inseminations.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_inseminations)
+
+        get_diagnostics_lambda = _lambda.Function(
+            self,
+            "GetDiagnosticsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_diagnostics.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_diagnostics_lambda)
+
+        # --- Cattle API Gateway Routes ---
+
+        # /cattle/animals
+        cattle_animals_resource = cattle_resource.add_resource("animals")
+        add_cognito_method(cattle_animals_resource, "GET", apigw.LambdaIntegration(get_cattle_animals))
+
+        # /cattle/animals/{animal_id}
+        cattle_animal_resource = cattle_animals_resource.add_resource("{animal_id}")
+        add_cognito_method(cattle_animal_resource, "GET", apigw.LambdaIntegration(get_cattle_animal))
+
+        # /cattle/animals/{animal_id}/inseminations
+        cattle_inseminations_resource = cattle_animal_resource.add_resource("inseminations")
+        add_cognito_method(cattle_inseminations_resource, "GET", apigw.LambdaIntegration(get_inseminations))
+        add_cognito_method(cattle_inseminations_resource, "POST", apigw.LambdaIntegration(post_insemination))
+
+        # /cattle/animals/{animal_id}/diagnostics
+        cattle_diagnostics_resource = cattle_animal_resource.add_resource("diagnostics")
+        add_cognito_method(cattle_diagnostics_resource, "GET", apigw.LambdaIntegration(get_diagnostics_lambda))
+        add_cognito_method(cattle_diagnostics_resource, "POST", apigw.LambdaIntegration(post_diagnostic))
+
+        # --- Pig Module Lambdas ---
+
+        get_modules = _lambda.Function(
+            self,
+            "GetModulesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_modules.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_modules)
+
+        get_module = _lambda.Function(
+            self,
+            "GetModuleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_module.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_module)
+
+        post_warehouse = _lambda.Function(
+            self,
+            "PostWarehouseLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_warehouse.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_warehouse)
+
+        put_warehouse = _lambda.Function(
+            self,
+            "PutWarehouseLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.put_warehouse.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_warehouse)
+
+        # --- Pig Batch Lambdas ---
+
+        get_batches = _lambda.Function(
+            self,
+            "GetBatchesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_batches.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_batches)
+
+        get_batch = _lambda.Function(
+            self,
+            "GetBatchLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_batch.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_batch)
+
+        post_batch = _lambda.Function(
+            self,
+            "PostBatchLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_batch.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_batch)
+
+        # --- Pig Feed Lambdas ---
+
+        post_feed_truck_arrival = _lambda.Function(
+            self,
+            "PostFeedTruckArrivalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_feed_truck_arrival.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_feed_truck_arrival)
+
+        get_feed_truck_arrivals = _lambda.Function(
+            self,
+            "GetFeedTruckArrivalsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_feed_truck_arrivals.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_truck_arrivals)
+
+        get_feed_schedule = _lambda.Function(
+            self,
+            "GetFeedScheduleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_feed_schedule.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_schedule)
+
+        put_feed_schedule = _lambda.Function(
+            self,
+            "PutFeedScheduleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.put_feed_schedule.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_feed_schedule)
+
+        # --- Pig Truck Arrival Lambdas ---
+
+        post_pig_truck_arrival = _lambda.Function(
+            self,
+            "PostPigTruckArrivalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_pig_truck_arrival.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_pig_truck_arrival)
+
+        get_pig_truck_arrivals = _lambda.Function(
+            self,
+            "GetPigTruckArrivalsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_pig_truck_arrivals.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_pig_truck_arrivals)
+
+        # --- Batch Start Summary Lambda ---
+
+        post_batch_start_summary = _lambda.Function(
+            self,
+            "PostBatchStartSummaryLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_batch_start_summary.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_batch_start_summary)
+
+        # --- Mortality Lambdas ---
+
+        post_mortality = _lambda.Function(
+            self,
+            "PostMortalityLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_mortality.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_mortality)
+
+        get_mortalities = _lambda.Function(
+            self,
+            "GetMortalitiesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_mortalities.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_mortalities)
+
+        # --- Medication Lambdas ---
+
+        post_medication = _lambda.Function(
+            self,
+            "PostMedicationLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_medication.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_medication)
+
+        get_medications = _lambda.Function(
+            self,
+            "GetMedicationsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_medications.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_medications)
+
+        post_medication_shot = _lambda.Function(
+            self,
+            "PostMedicationShotLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_medication_shot.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_medication_shot)
+
+        get_medication_shots = _lambda.Function(
+            self,
+            "GetMedicationShotsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_medication_shots.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_medication_shots)
+
+        # --- Feed Consumption Plan Lambdas ---
+
+        put_feed_consumption_plan = _lambda.Function(
+            self,
+            "PutFeedConsumptionPlanLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.put_feed_consumption_plan.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_feed_consumption_plan)
+
+        get_feed_consumption_plan = _lambda.Function(
+            self,
+            "GetFeedConsumptionPlanLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_feed_consumption_plan.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_consumption_plan)
+
+        # --- Feed Balance Lambdas ---
+
+        post_feed_balance = _lambda.Function(
+            self,
+            "PostFeedBalanceLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.post_feed_balance.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_feed_balance)
+
+        get_feed_balances = _lambda.Function(
+            self,
+            "GetFeedBalancesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.get_feed_balances.lambda_handler",
+            code=_lambda.Code.from_asset("src"),
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_balances)
+
+        # --- Pig API Gateway Routes ---
+
+        # /pigs/modules
+        modules_resource = pigs_resource.add_resource("modules")
+        add_cognito_method(modules_resource, "GET", apigw.LambdaIntegration(get_modules))
+
+        # /pigs/modules/{module_id}
+        module_resource = modules_resource.add_resource("{module_id}")
+        add_cognito_method(module_resource, "GET", apigw.LambdaIntegration(get_module))
+
+        # /pigs/modules/{module_id}/warehouses
+        warehouses_resource = module_resource.add_resource("warehouses")
+        add_cognito_method(warehouses_resource, "POST", apigw.LambdaIntegration(post_warehouse))
+
+        # /pigs/modules/{module_id}/warehouses/{warehouse_id}
+        warehouse_resource = warehouses_resource.add_resource("{warehouse_id}")
+        add_cognito_method(warehouse_resource, "PUT", apigw.LambdaIntegration(put_warehouse))
+
+        # /pigs/batches
+        batches_resource = pigs_resource.add_resource("batches")
+        add_cognito_method(batches_resource, "GET", apigw.LambdaIntegration(get_batches))
+        add_cognito_method(batches_resource, "POST", apigw.LambdaIntegration(post_batch))
+
+        # /pigs/batches/{batch_id}
+        batch_resource = batches_resource.add_resource("{batch_id}")
+        add_cognito_method(batch_resource, "GET", apigw.LambdaIntegration(get_batch))
+
+        # /pigs/batches/{batch_id}/feed-truck-arrivals
+        feed_truck_arrivals_resource = batch_resource.add_resource("feed-truck-arrivals")
+        add_cognito_method(feed_truck_arrivals_resource, "POST", apigw.LambdaIntegration(post_feed_truck_arrival))
+        add_cognito_method(feed_truck_arrivals_resource, "GET", apigw.LambdaIntegration(get_feed_truck_arrivals))
+
+        # /pigs/batches/{batch_id}/feed-schedule
+        feed_schedule_resource = batch_resource.add_resource("feed-schedule")
+        add_cognito_method(feed_schedule_resource, "GET", apigw.LambdaIntegration(get_feed_schedule))
+        add_cognito_method(feed_schedule_resource, "PUT", apigw.LambdaIntegration(put_feed_schedule))
+
+        # /pigs/batches/{batch_id}/pig-truck-arrivals
+        pig_truck_arrivals_resource = batch_resource.add_resource("pig-truck-arrivals")
+        add_cognito_method(pig_truck_arrivals_resource, "POST", apigw.LambdaIntegration(post_pig_truck_arrival))
+        add_cognito_method(pig_truck_arrivals_resource, "GET", apigw.LambdaIntegration(get_pig_truck_arrivals))
+
+        # /pigs/batches/{batch_id}/start-summary
+        start_summary_resource = batch_resource.add_resource("start-summary")
+        add_cognito_method(start_summary_resource, "POST", apigw.LambdaIntegration(post_batch_start_summary))
+
+        # /pigs/batches/{batch_id}/mortalities
+        mortalities_resource = batch_resource.add_resource("mortalities")
+        add_cognito_method(mortalities_resource, "POST", apigw.LambdaIntegration(post_mortality))
+        add_cognito_method(mortalities_resource, "GET", apigw.LambdaIntegration(get_mortalities))
+
+        # /pigs/batches/{batch_id}/medications
+        medications_resource = batch_resource.add_resource("medications")
+        add_cognito_method(medications_resource, "POST", apigw.LambdaIntegration(post_medication))
+        add_cognito_method(medications_resource, "GET", apigw.LambdaIntegration(get_medications))
+
+        # /pigs/batches/{batch_id}/medication-shots
+        medication_shots_resource = batch_resource.add_resource("medication-shots")
+        add_cognito_method(medication_shots_resource, "POST", apigw.LambdaIntegration(post_medication_shot))
+        add_cognito_method(medication_shots_resource, "GET", apigw.LambdaIntegration(get_medication_shots))
+
+        # /pigs/batches/{batch_id}/feed-consumption-plan
+        feed_consumption_plan_resource = batch_resource.add_resource("feed-consumption-plan")
+        add_cognito_method(feed_consumption_plan_resource, "PUT", apigw.LambdaIntegration(put_feed_consumption_plan))
+        add_cognito_method(feed_consumption_plan_resource, "GET", apigw.LambdaIntegration(get_feed_consumption_plan))
+
+        # /pigs/batches/{batch_id}/feed-balances
+        feed_balances_resource = batch_resource.add_resource("feed-balances")
+        add_cognito_method(feed_balances_resource, "POST", apigw.LambdaIntegration(post_feed_balance))
+        add_cognito_method(feed_balances_resource, "GET", apigw.LambdaIntegration(get_feed_balances))
+
+        CfnOutput(
+            self,
+            "ApiGatewayUrl",
+            value=api.url,
+            description="API Gateway REST API URL",
+        )
+
+        # --- Runtime config.json for frontend (Cognito + API values resolved at deploy time) ---
+
+        cognito_hosted_ui_url = f"https://{user_pool_domain.domain_name}.auth.{self.region}.amazoncognito.com"
+        cloudfront_url = f"https://{distribution.distribution_domain_name}"
+
+        s3deploy.BucketDeployment(
+            self,
+            "FrontendConfigDeployment",
+            sources=[
+                s3deploy.Source.json_data(
+                    "config.json",
+                    {
+                        "cognitoDomain": cognito_hosted_ui_url,
+                        "cognitoClientId": user_pool_client.user_pool_client_id,
+                        "redirectUri": f"{cloudfront_url}/callback",
+                        "apiUrl": api.url,
+                    },
+                )
+            ],
+            destination_bucket=frontend_bucket,
+            distribution=distribution,
+            distribution_paths=["/config.json"],
+        )

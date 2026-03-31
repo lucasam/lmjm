@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Optional
 
 import boto3
 
@@ -27,12 +27,11 @@ class PostDiagnosticRequest:
     tags: Optional[str] = None
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     ear_tag = event["pathParameters"]["animal_id"]
     request = load_data_class_from_dict(json.loads(event["body"]), PostDiagnosticRequest)
 
     animal = animal_repo.get_by_ear_tag(ear_tag)
-    insemination = insemination_repo.get_latest(animal.pk)
 
     try:
         diagnostic_date = datetime.strptime(request.diagnostic_date, "%Y%m%d")
@@ -41,6 +40,8 @@ def lambda_handler(event, context):
 
     if not animal:
         return {"statusCode": 404, "body": json.dumps({"message": "Animal not found"})}
+
+    insemination = insemination_repo.get_latest(animal.pk)
 
     if not insemination:
         return {"statusCode": 404, "body": json.dumps({"message": "No insemination found"})}
