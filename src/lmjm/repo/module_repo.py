@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
 
-from lmjm.model import Module, Warehouse
+from lmjm.model import Module
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, load_data_class_from_dict_list
 
 
@@ -31,9 +31,3 @@ class ModuleRepo:
             response = self.table.scan(FilterExpression=filter_expr, ExclusiveStartKey=response["LastEvaluatedKey"])
             items.extend(response.get("Items", []))
         return load_data_class_from_dict_list(items, Module)
-
-    def query_warehouses(self, pk: str) -> List[Warehouse]:
-        response = self.table.query(
-            KeyConditionExpression=Key("pk").eq(pk) & Key("sk").begins_with("Warehouse|"),
-        )
-        return load_data_class_from_dict_list(response["Items"], Warehouse)

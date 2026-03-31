@@ -1,7 +1,6 @@
 """Unit tests for pig entity repositories.
 
 Validates:
-- Requirement 7.16: Repository layer queries warehouses with sk begins_with Warehouse|
 - Requirement 7.17: Repository layer queries batch sub-entities with sk begins_with prefix
 - Requirement 7.18: Repository layer filters cattle by species attribute or sk=Animal
 """
@@ -26,7 +25,6 @@ from lmjm.model import (
     Module,
     Mortality,
     PigTruckArrival,
-    Warehouse,
 )
 from lmjm.repo import (
     BatchRepo,
@@ -39,7 +37,6 @@ from lmjm.repo import (
     ModuleRepo,
     MortalityRepo,
     PigTruckArrivalRepo,
-    WarehouseRepo,
 )
 from lmjm.util.marshmallow_serializer import serialize_to_dict as _original_serialize
 
@@ -83,7 +80,6 @@ _SERIALIZE_PATCHES = [
     "lmjm.repo.medication_shot_repo.serialize_to_dict",
     "lmjm.repo.mortality_repo.serialize_to_dict",
     "lmjm.repo.pig_truck_arrival_repo.serialize_to_dict",
-    "lmjm.repo.warehouse_repo.serialize_to_dict",
 ]
 
 
@@ -137,39 +133,6 @@ def test_module_repo_list_returns_all_modules() -> None:
     assert len(result) == 2
     names = {m.name for m in result}
     assert names == {"Module 1", "Module 2"}
-
-
-@mock_aws
-def test_module_repo_query_warehouses_uses_begins_with() -> None:
-    """Requirement 7.16: query_warehouses uses sk begins_with Warehouse| to fetch warehouses for a module."""
-    table = _create_table()
-    _put(table, Module(pk="MODULE#1", sk="Module", module_number=1, name="Module 1"))
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#1", sk="Warehouse|w1", name="Barn A", area=100.0, supported_animal_count=50, silo_capacity=5000.0
-        ),
-    )
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#1", sk="Warehouse|w2", name="Barn B", area=200.0, supported_animal_count=80, silo_capacity=8000.0
-        ),
-    )
-    # Different module — should not appear
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#2", sk="Warehouse|w3", name="Barn C", area=150.0, supported_animal_count=60, silo_capacity=6000.0
-        ),
-    )
-
-    repo = ModuleRepo(table)
-    result = repo.query_warehouses("MODULE#1")
-
-    assert len(result) == 2
-    names = {w.name for w in result}
-    assert names == {"Barn A", "Barn B"}
 
 
 # ── BatchRepo ───────────────────────────────────────────────────────────────────
@@ -662,42 +625,3 @@ def test_feed_balance_repo_list_sorted_by_measurement_date() -> None:
     assert len(result) == 3
     dates = [r.measurement_date for r in result]
     assert dates == ["2025-03-10", "2025-03-15", "2025-03-20"]
-
-
-# ── WarehouseRepo ────────────────────────────────────────────────────────────────
-
-
-@mock_aws
-def test_warehouse_repo_put_creates_record() -> None:
-    """Requirement 7.16: WarehouseRepo.put creates a Warehouse record."""
-    table = _create_table()
-    repo = WarehouseRepo(table)
-
-    wh = Warehouse(
-        pk="MODULE#1", sk="Warehouse|w1", name="Barn A", area=100.0, supported_animal_count=50, silo_capacity=5000.0
-    )
-    repo.put(wh)
-
-    response = table.get_item(Key={"pk": "MODULE#1", "sk": "Warehouse|w1"})
-    assert response.get("Item") is not None
-    assert response["Item"]["name"] == "Barn A"
-
-
-@mock_aws
-def test_warehouse_repo_update_overwrites_record() -> None:
-    """Requirement 7.16: WarehouseRepo.update overwrites the Warehouse record."""
-    table = _create_table()
-    repo = WarehouseRepo(table)
-
-    wh = Warehouse(
-        pk="MODULE#1", sk="Warehouse|w1", name="Barn A", area=100.0, supported_animal_count=50, silo_capacity=5000.0
-    )
-    repo.put(wh)
-
-    wh.name = "Barn A Updated"
-    wh.supported_animal_count = 75
-    repo.update(wh)
-
-    response = table.get_item(Key={"pk": "MODULE#1", "sk": "Warehouse|w1"})
-    assert response["Item"]["name"] == "Barn A Updated"
-    assert response["Item"]["supported_animal_count"] == 75

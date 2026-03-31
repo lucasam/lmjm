@@ -39,7 +39,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             sk=f"FeedSchedule|{uuid.uuid4()}",
             feed_type=entry_dict.get("feed_type", ""),
             planned_date=entry_dict.get("planned_date", ""),
-            expected_amount_kg=float(entry_dict.get("expected_amount_kg", 0.0)),
+            expected_amount_kg=int(entry_dict.get("expected_amount_kg", 0)),
         )
         feed_schedule_repo.put(schedule)
         new_schedules.append(schedule)

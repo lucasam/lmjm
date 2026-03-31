@@ -1,13 +1,8 @@
 """Unit tests for pig write Lambda handlers.
 
 Validates:
-- Requirement 8.1: POST /pigs/modules/{module_id}/warehouses creates warehouse with 201
-- Requirement 8.2: POST warehouse returns 400 for empty name
-- Requirement 8.3: POST warehouse returns 400 for non-positive supported_animal_count
-- Requirement 8.4: PUT /pigs/modules/{module_id}/warehouses/{warehouse_id} updates warehouse with 200
 - Requirement 8.5: POST /pigs/batches creates batch with status "created" and returns 201
 - Requirement 8.6: POST batch returns 404 when module not found
-- Requirement 8.7: POST batch returns 400 when warehouse not in module
 - Requirement 8.8: POST /pigs/batches/{batch_id}/feed-truck-arrivals creates arrival with 201
 - Requirement 8.9: POST feed-truck-arrival returns 404 when batch not found
 - Requirement 8.10: POST feed-truck-arrival returns 400 for invalid data
@@ -39,7 +34,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from lmjm.model import Batch, FeedSchedule, Medication, Module, Warehouse
+from lmjm.model import Batch, FeedSchedule, Medication, Module
 from lmjm.util.marshmallow_serializer import serialize_to_dict as _original_serialize
 
 
@@ -54,7 +49,6 @@ def _set_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TABLE_NAME", "lmjm")
     # Patch serialize_to_dict in all repo modules that write to DynamoDB
     monkeypatch.setattr("lmjm.repo.batch_repo.serialize_to_dict", _decimal_safe_serialize)
-    monkeypatch.setattr("lmjm.repo.warehouse_repo.serialize_to_dict", _decimal_safe_serialize)
     monkeypatch.setattr("lmjm.repo.feed_schedule_repo.serialize_to_dict", _decimal_safe_serialize)
     monkeypatch.setattr("lmjm.repo.feed_truck_arrival_repo.serialize_to_dict", _decimal_safe_serialize)
     monkeypatch.setattr("lmjm.repo.pig_truck_arrival_repo.serialize_to_dict", _decimal_safe_serialize)
@@ -86,14 +80,8 @@ def _put(table: Any, obj: object) -> None:
     table.put_item(Item=_decimal_safe_serialize(obj))
 
 
-def _seed_module_with_warehouses(table: Any) -> None:
+def _seed_module(table: Any) -> None:
     _put(table, Module(pk="MODULE#1", sk="Module", module_number=1, name="Module 1"))
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#1", sk="Warehouse|w1", name="Barn A", area=100.0, supported_animal_count=50, silo_capacity=5000.0
-        ),
-    )
 
 
 def _seed_batch(table: Any) -> None:
@@ -125,99 +113,6 @@ def _seed_batch_with_medication(table: Any) -> None:
     )
 
 
-# ── post_warehouse tests ────────────────────────────────────────────────────────
-
-
-@mock_aws
-def test_post_warehouse_returns_201_on_success() -> None:
-    """Requirement 8.1: POST warehouse creates record and returns 201."""
-    table = _create_table()
-    _put(table, Module(pk="MODULE#1", sk="Module", module_number=1, name="Module 1"))
-
-    import lmjm.post_warehouse as mod
-
-    importlib.reload(mod)
-
-    event: dict[str, Any] = {
-        "pathParameters": {"module_id": "MODULE#1"},
-        "body": json.dumps({"name": "Barn C", "area": 150.0, "supported_animal_count": 60, "silo_capacity": 7000.0}),
-    }
-    result = mod.lambda_handler(event, None)
-
-    assert result["statusCode"] == 201
-    body = json.loads(result["body"])
-    assert body["name"] == "Barn C"
-    assert body["pk"] == "MODULE#1"
-    assert body["supported_animal_count"] == 60
-
-
-@mock_aws
-def test_post_warehouse_returns_400_for_empty_name() -> None:
-    """Requirement 8.2: POST warehouse returns 400 when name is empty."""
-    _create_table()
-
-    import lmjm.post_warehouse as mod
-
-    importlib.reload(mod)
-
-    event: dict[str, Any] = {
-        "pathParameters": {"module_id": "MODULE#1"},
-        "body": json.dumps({"name": "", "supported_animal_count": 10}),
-    }
-    result = mod.lambda_handler(event, None)
-
-    assert result["statusCode"] == 400
-    body = json.loads(result["body"])
-    assert "name" in body["message"].lower()
-
-
-@mock_aws
-def test_post_warehouse_returns_400_for_non_positive_animal_count() -> None:
-    """Requirement 8.3: POST warehouse returns 400 when supported_animal_count is not positive."""
-    _create_table()
-
-    import lmjm.post_warehouse as mod
-
-    importlib.reload(mod)
-
-    event: dict[str, Any] = {
-        "pathParameters": {"module_id": "MODULE#1"},
-        "body": json.dumps({"name": "Barn D", "supported_animal_count": 0}),
-    }
-    result = mod.lambda_handler(event, None)
-
-    assert result["statusCode"] == 400
-    body = json.loads(result["body"])
-    assert "supported_animal_count" in body["message"]
-
-
-# ── put_warehouse tests ─────────────────────────────────────────────────────────
-
-
-@mock_aws
-def test_put_warehouse_returns_200_on_success() -> None:
-    """Requirement 8.4: PUT warehouse updates record and returns 200."""
-    table = _create_table()
-    _seed_module_with_warehouses(table)
-
-    import lmjm.put_warehouse as mod
-
-    importlib.reload(mod)
-
-    event: dict[str, Any] = {
-        "pathParameters": {"module_id": "MODULE#1", "warehouse_id": "w1"},
-        "body": json.dumps(
-            {"name": "Barn A Updated", "area": 200.0, "supported_animal_count": 80, "silo_capacity": 9000.0}
-        ),
-    }
-    result = mod.lambda_handler(event, None)
-
-    assert result["statusCode"] == 200
-    body = json.loads(result["body"])
-    assert body["name"] == "Barn A Updated"
-    assert body["sk"] == "Warehouse|w1"
-
-
 # ── post_batch tests ────────────────────────────────────────────────────────────
 
 
@@ -225,7 +120,7 @@ def test_put_warehouse_returns_200_on_success() -> None:
 def test_post_batch_returns_201_on_success() -> None:
     """Requirement 8.5: POST batch creates batch with status 'created' and returns 201."""
     table = _create_table()
-    _seed_module_with_warehouses(table)
+    _seed_module(table)
 
     import lmjm.post_batch as mod
 
@@ -236,7 +131,6 @@ def test_post_batch_returns_201_on_success() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#1",
-                "warehouse_ids": ["Warehouse|w1"],
                 "pig_count": 500,
                 "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
@@ -266,7 +160,6 @@ def test_post_batch_returns_404_for_missing_module() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#99",
-                "warehouse_ids": [],
                 "pig_count": 500,
                 "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
@@ -278,35 +171,6 @@ def test_post_batch_returns_404_for_missing_module() -> None:
     assert result["statusCode"] == 404
     body = json.loads(result["body"])
     assert body["message"] == "Module not found"
-
-
-@mock_aws
-def test_post_batch_returns_400_for_invalid_warehouse() -> None:
-    """Requirement 8.7: POST batch returns 400 when warehouse_id not in module."""
-    table = _create_table()
-    _seed_module_with_warehouses(table)
-
-    import lmjm.post_batch as mod
-
-    importlib.reload(mod)
-
-    event: dict[str, Any] = {
-        "body": json.dumps(
-            {
-                "supply_id": 100,
-                "module_id": "MODULE#1",
-                "warehouse_ids": ["Warehouse|nonexistent"],
-                "pig_count": 500,
-                "receive_date": "20250101",
-                "min_feed_stock_threshold": 1000.0,
-            }
-        ),
-    }
-    result = mod.lambda_handler(event, None)
-
-    assert result["statusCode"] == 400
-    body = json.loads(result["body"])
-    assert "not found in module" in body["message"]
 
 
 # ── post_feed_truck_arrival tests ────────────────────────────────────────────────

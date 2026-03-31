@@ -390,26 +390,6 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_module)
 
-        post_warehouse = _lambda.Function(
-            self,
-            "PostWarehouseLambda",
-            runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="lmjm.post_warehouse.lambda_handler",
-            code=lambda_code,
-            environment={"TABLE_NAME": table.table_name},
-        )
-        table.grant_read_write_data(post_warehouse)
-
-        put_warehouse = _lambda.Function(
-            self,
-            "PutWarehouseLambda",
-            runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="lmjm.put_warehouse.lambda_handler",
-            code=lambda_code,
-            environment={"TABLE_NAME": table.table_name},
-        )
-        table.grant_read_write_data(put_warehouse)
-
         # --- Pig Batch Lambdas ---
 
         get_batches = _lambda.Function(
@@ -635,14 +615,6 @@ class LmjmStack(Stack):
         # /pigs/modules/{module_id}
         module_resource = modules_resource.add_resource("{module_id}")
         add_cognito_method(module_resource, "GET", apigw.LambdaIntegration(get_module))
-
-        # /pigs/modules/{module_id}/warehouses
-        warehouses_resource = module_resource.add_resource("warehouses")
-        add_cognito_method(warehouses_resource, "POST", apigw.LambdaIntegration(post_warehouse))
-
-        # /pigs/modules/{module_id}/warehouses/{warehouse_id}
-        warehouse_resource = warehouses_resource.add_resource("{warehouse_id}")
-        add_cognito_method(warehouse_resource, "PUT", apigw.LambdaIntegration(put_warehouse))
 
         # /pigs/batches
         batches_resource = pigs_resource.add_resource("batches")

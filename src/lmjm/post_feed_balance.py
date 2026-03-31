@@ -23,7 +23,7 @@ feed_balance_repo = FeedBalanceRepo(table)
 @dataclasses.dataclass
 class PostFeedBalanceRequest:
     measurement_date: str
-    balance_kg: float
+    balance_kg: int
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:

@@ -35,16 +35,6 @@ export interface Module {
   pk: string;
   module_number: number;
   name: string;
-}
-
-export interface ModuleWithWarehouses extends Module {
-  warehouses: Warehouse[];
-}
-
-export interface Warehouse {
-  pk: string;
-  sk: string;
-  name: string;
   area: number;
   supported_animal_count: number;
   silo_capacity: number;
@@ -55,7 +45,6 @@ export interface Batch {
   status: 'created' | 'in_progress' | 'delivered';
   supply_id: number;
   module_id: string;
-  warehouse_ids: string[];
   receive_date: string;
   expected_slaughter_date?: string;
   pig_count: number;

@@ -11,6 +11,6 @@ class FeedTruckArrival:
     sk: str
     receive_date: str = ""
     fiscal_document_number: str = ""
-    actual_amount_kg: float = 0.0
+    actual_amount_kg: int = 0
     feed_type: str = ""
     feed_schedule_id: Optional[str] = None

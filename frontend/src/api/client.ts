@@ -3,7 +3,6 @@ import type {
   Insemination,
   Diagnostic,
   Module,
-  ModuleWithWarehouses,
   Batch,
   FeedSchedule,
   FeedTruckArrival,
@@ -29,24 +28,9 @@ export interface PostDiagnosticRequest {
   tags?: string;
 }
 
-export interface CreateWarehouseRequest {
-  name: string;
-  area: number;
-  supported_animal_count: number;
-  silo_capacity: number;
-}
-
-export interface UpdateWarehouseRequest {
-  name: string;
-  area: number;
-  supported_animal_count: number;
-  silo_capacity: number;
-}
-
 export interface CreateBatchRequest {
   supply_id: number;
   module_id: string;
-  warehouse_ids: string[];
   pig_count: number;
   receive_date: string;
   min_feed_stock_threshold: number;
@@ -231,16 +215,8 @@ export function listModules(): Promise<Module[]> {
   return get<Module[]>('/pigs/modules');
 }
 
-export function getModule(moduleId: string): Promise<ModuleWithWarehouses> {
-  return get<ModuleWithWarehouses>(`/pigs/modules/${encodeURIComponent(moduleId)}`);
-}
-
-export function createWarehouse(moduleId: string, data: CreateWarehouseRequest): Promise<void> {
-  return post(`/pigs/modules/${encodeURIComponent(moduleId)}/warehouses`, data);
-}
-
-export function updateWarehouse(moduleId: string, warehouseId: string, data: UpdateWarehouseRequest): Promise<void> {
-  return put(`/pigs/modules/${encodeURIComponent(moduleId)}/warehouses/${encodeURIComponent(warehouseId)}`, data);
+export function getModule(moduleId: string): Promise<Module> {
+  return get<Module>(`/pigs/modules/${encodeURIComponent(moduleId)}`);
 }
 
 // --- Pig Batches ---

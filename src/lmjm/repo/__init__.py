@@ -11,7 +11,6 @@ from lmjm.repo.medication_shot_repo import MedicationShotRepo
 from lmjm.repo.module_repo import ModuleRepo
 from lmjm.repo.mortality_repo import MortalityRepo
 from lmjm.repo.pig_truck_arrival_repo import PigTruckArrivalRepo
-from lmjm.repo.warehouse_repo import WarehouseRepo
 
 __all__ = [
     "AnimalRepo",
@@ -27,5 +26,4 @@ __all__ = [
     "ModuleRepo",
     "MortalityRepo",
     "PigTruckArrivalRepo",
-    "WarehouseRepo",
 ]

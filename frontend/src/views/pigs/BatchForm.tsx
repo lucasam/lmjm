@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listModules, getModule, createBatch } from '../../api/client';
+import { listModules, createBatch } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
-import type { Module, Warehouse } from '../../types/models';
+import type { Module } from '../../types/models';
 
 interface BatchFormProps {
   onClose: () => void;
@@ -16,8 +16,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
   const { data: modules } = useApi(fetchModules);
 
   const [moduleId, setModuleId] = useState('');
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [warehouseIds, setWarehouseIds] = useState<string[]>([]);
   const [supplyId, setSupplyId] = useState('');
   const [pigCount, setPigCount] = useState('');
   const [receiveDate, setReceiveDate] = useState('');
@@ -25,30 +23,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    if (!moduleId) {
-      setWarehouses([]);
-      setWarehouseIds([]);
-      return;
-    }
-    let cancelled = false;
-    getModule(moduleId).then((mod) => {
-      if (!cancelled) {
-        setWarehouses(mod.warehouses);
-        setWarehouseIds([]);
-      }
-    }).catch(() => {
-      if (!cancelled) setWarehouses([]);
-    });
-    return () => { cancelled = true; };
-  }, [moduleId]);
-
-  const toggleWarehouse = (wId: string) => {
-    setWarehouseIds((prev) =>
-      prev.includes(wId) ? prev.filter((id) => id !== wId) : [...prev, wId]
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +32,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
       await createBatch({
         supply_id: Number(supplyId),
         module_id: moduleId,
-        warehouse_ids: warehouseIds,
         pig_count: Number(pigCount),
         receive_date: receiveDate.replace(/-/g, ''),
         min_feed_stock_threshold: Number(minFeedStockThreshold),
@@ -95,26 +68,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
               ))}
             </select>
           </label>
-
-          {moduleId && warehouses.length > 0 && (
-            <fieldset style={fieldsetStyle}>
-              <legend style={legendStyle}>{t('pigs.warehouses')} *</legend>
-              {warehouses.map((w) => {
-                const wId = w.sk.replace('Warehouse|', '');
-                return (
-                  <label key={w.sk} style={checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={warehouseIds.includes(wId)}
-                      onChange={() => toggleWarehouse(wId)}
-                      style={checkboxInput}
-                    />
-                    {w.name}
-                  </label>
-                );
-              })}
-            </fieldset>
-          )}
 
           <label style={labelStyle}>
             {t('pigs.pigCount')} *
@@ -157,10 +110,6 @@ const inputStyle: React.CSSProperties = {
   display: 'block', width: '100%', padding: '10px', marginTop: '0.25rem',
   border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem', boxSizing: 'border-box', minHeight: '44px',
 };
-const fieldsetStyle: React.CSSProperties = { border: '1px solid #ccc', borderRadius: '4px', padding: '0.75rem', marginBottom: '1rem' };
-const legendStyle: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 500, color: '#333' };
-const checkboxLabel: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', minHeight: '44px', cursor: 'pointer' };
-const checkboxInput: React.CSSProperties = { width: '20px', height: '20px' };
 const btnRow: React.CSSProperties = { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' };
 const cancelBtn: React.CSSProperties = {
   minWidth: '44px', minHeight: '44px', padding: '10px 18px',

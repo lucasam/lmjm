@@ -24,10 +24,9 @@ batch_repo = BatchRepo(table)
 class PostBatchRequest:
     supply_id: int
     module_id: str
-    warehouse_ids: list[str]
     pig_count: int
     receive_date: str
-    min_feed_stock_threshold: float
+    min_feed_stock_threshold: int
     expected_slaughter_date: Optional[str] = None
 
 
@@ -47,13 +46,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if not module:
         return respond(status_code=404, error="Module not found")
 
-    # Validate warehouse_ids exist within the module
-    warehouses = module_repo.query_warehouses(request.module_id)
-    warehouse_sks = {w.sk for w in warehouses}
-    for wid in request.warehouse_ids:
-        if wid not in warehouse_sks:
-            return respond(status_code=400, error=f"Warehouse {wid} not found in module")
-
     # Parse dates
     receive_date = _parse_date(request.receive_date, "receive_date")
     if not receive_date:
@@ -72,7 +64,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         status="created",
         supply_id=request.supply_id,
         module_id=request.module_id,
-        warehouse_ids=request.warehouse_ids,
         receive_date=receive_date,
         expected_slaughter_date=expected_slaughter_date,
         pig_count=request.pig_count,

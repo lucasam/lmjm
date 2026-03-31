@@ -2,10 +2,10 @@
 
 Validates:
 - Requirement 6.1: GET /pigs/modules returns all modules
-- Requirement 6.2: GET /pigs/modules/{module_id} returns module with warehouses
+- Requirement 6.2: GET /pigs/modules/{module_id} returns module
 - Requirement 6.3: GET /pigs/modules/{module_id} returns 404 if not found
 - Requirement 6.4: GET /pigs/batches returns all batches
-- Requirement 6.5: GET /pigs/batches/{batch_id} returns batch with status and warehouses
+- Requirement 6.5: GET /pigs/batches/{batch_id} returns batch with status
 - Requirement 6.6: GET /pigs/batches/{batch_id} returns 404 if not found
 - Requirement 6.7: GET /pigs/batches/{batch_id}/feed-schedule returns feed schedule entries
 - Requirement 6.8: GET /pigs/batches/{batch_id}/pig-truck-arrivals sorted by arrival_date asc
@@ -77,28 +77,12 @@ from lmjm.model import (
     Module,
     Mortality,
     PigTruckArrival,
-    Warehouse,
 )
 
 
 def _seed_modules(table: Any) -> None:
     _put(table, Module(pk="MODULE#1", sk="Module", module_number=1, name="Module 1"))
     _put(table, Module(pk="MODULE#2", sk="Module", module_number=2, name="Module 2"))
-
-
-def _seed_warehouses(table: Any) -> None:
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#1", sk="Warehouse|w1", name="Barn A", area=100.0, supported_animal_count=50, silo_capacity=5000.0
-        ),
-    )
-    _put(
-        table,
-        Warehouse(
-            pk="MODULE#1", sk="Warehouse|w2", name="Barn B", area=200.0, supported_animal_count=80, silo_capacity=8000.0
-        ),
-    )
 
 
 def _seed_batches(table: Any) -> None:
@@ -391,11 +375,10 @@ def test_get_modules_returns_empty_list_when_no_modules() -> None:
 
 
 @mock_aws
-def test_get_module_returns_module_with_warehouses() -> None:
-    """Requirement 6.2: GET /pigs/modules/{module_id} returns module with its warehouses."""
+def test_get_module_returns_module() -> None:
+    """Requirement 6.2: GET /pigs/modules/{module_id} returns module."""
     table = _create_table()
     _seed_modules(table)
-    _seed_warehouses(table)
 
     import lmjm.get_module as mod
 
@@ -408,9 +391,6 @@ def test_get_module_returns_module_with_warehouses() -> None:
     body = json.loads(result["body"])
     assert body["name"] == "Module 1"
     assert body["module_number"] == 1
-    assert len(body["warehouses"]) == 2
-    wh_names = {w["name"] for w in body["warehouses"]}
-    assert wh_names == {"Barn A", "Barn B"}
 
 
 @mock_aws

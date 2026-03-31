@@ -11,5 +11,5 @@ class FeedSchedule:
     sk: str
     feed_type: str = ""
     planned_date: str = ""
-    expected_amount_kg: float = 0.0
+    expected_amount_kg: int = 0
     fulfilled_by: Optional[str] = None

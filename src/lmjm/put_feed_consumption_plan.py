@@ -66,7 +66,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             pk=batch_id,
             sk=f"FeedConsumptionPlan|{day_number}",
             day_number=day_number,
-            expected_grams_per_animal=float(entry_dict["expected_grams_per_animal"]),
+            expected_grams_per_animal=int(entry_dict["expected_grams_per_animal"]),
             date=plan_date.strftime("%Y-%m-%d"),
         )
         new_plans.append(plan)

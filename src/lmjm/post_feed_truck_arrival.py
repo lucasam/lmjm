@@ -26,7 +26,7 @@ feed_schedule_repo = FeedScheduleRepo(table)
 class PostFeedTruckArrivalRequest:
     receive_date: str
     fiscal_document_number: str
-    actual_amount_kg: float
+    actual_amount_kg: int
     feed_type: str
     feed_schedule_id: Optional[str] = None
 

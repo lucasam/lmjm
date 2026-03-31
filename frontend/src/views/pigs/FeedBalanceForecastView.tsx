@@ -23,7 +23,7 @@ import type {
   FeedTruckArrival,
   FeedConsumptionPlanEntry,
   Mortality,
-  ModuleWithWarehouses,
+  Module,
 } from '../../types/models';
 
 interface ForecastRow {
@@ -48,26 +48,12 @@ function computeForecast(
   arrivals: FeedTruckArrival[],
   plan: FeedConsumptionPlanEntry[],
   mortalities: Mortality[],
-  moduleData: ModuleWithWarehouses,
+  moduleData: Module,
 ): ForecastRow[] {
   const totalAnimals = batch.total_animal_count ?? 0;
   if (totalAnimals === 0 || balances.length === 0) return [];
 
-  // Total silo capacity from batch warehouses
-  const batchWarehouseIds = new Set(batch.warehouse_ids ?? []);
-  let totalSiloCapacity = 0;
-  for (const w of moduleData.warehouses) {
-    if (batchWarehouseIds.has(w.sk)) {
-      totalSiloCapacity += w.silo_capacity;
-    }
-  }
-  // If no warehouse match by sk, sum all warehouses in module
-  if (totalSiloCapacity === 0) {
-    for (const w of moduleData.warehouses) {
-      totalSiloCapacity += w.silo_capacity;
-    }
-  }
-
+  const totalSiloCapacity = moduleData.silo_capacity;
   const minThreshold = batch.min_feed_stock_threshold;
 
   // Latest balance
@@ -153,7 +139,7 @@ export default function FeedBalanceForecastView() {
   const { data: batch, loading: l1, error: e1, refetch: r1 } = useApi(fetchBatch);
 
   const fetchModule = useCallback(
-    () => (batch ? getModule(batch.module_id) : Promise.resolve({ pk: '', module_number: 0, name: '', warehouses: [] } as ModuleWithWarehouses)),
+    () => (batch ? getModule(batch.module_id) : Promise.resolve({ pk: '', module_number: 0, name: '', area: 0, supported_animal_count: 0, silo_capacity: 0 } as Module)),
     [batch],
   );
 
