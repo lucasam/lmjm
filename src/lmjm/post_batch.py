@@ -10,6 +10,7 @@ import boto3
 from lmjm.model import Batch
 from lmjm.repo import BatchRepo, ModuleRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -44,28 +45,25 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # Validate module exists
     module = module_repo.get(request.module_id)
     if not module:
-        return {"statusCode": 404, "body": json.dumps({"message": "Module not found"})}
+        return respond(status_code=404, error="Module not found")
 
     # Validate warehouse_ids exist within the module
     warehouses = module_repo.query_warehouses(request.module_id)
     warehouse_sks = {w.sk for w in warehouses}
     for wid in request.warehouse_ids:
         if wid not in warehouse_sks:
-            return {"statusCode": 400, "body": json.dumps({"message": f"Warehouse {wid} not found in module"})}
+            return respond(status_code=400, error=f"Warehouse {wid} not found in module")
 
     # Parse dates
     receive_date = _parse_date(request.receive_date, "receive_date")
     if not receive_date:
-        return {"statusCode": 400, "body": json.dumps({"message": "receive_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="receive_date must be in YYYYMMDD format")
 
     expected_slaughter_date: Optional[str] = None
     if request.expected_slaughter_date:
         expected_slaughter_date = _parse_date(request.expected_slaughter_date, "expected_slaughter_date")
         if not expected_slaughter_date:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"message": "expected_slaughter_date must be in YYYYMMDD format"}),
-            }
+            return respond(status_code=400, error="expected_slaughter_date must be in YYYYMMDD format")
 
     batch_pk = str(uuid.uuid4())
     batch = Batch(
@@ -82,4 +80,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     batch_repo.update(batch)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(batch))}
+    return respond(status_code=201, body=serialize_to_dict(batch))

@@ -14,6 +14,41 @@ aws codeartifact login --tool pip --repository gbl-pypi --domain amazon --domain
 aws codeartifact login --tool twine --repository gbl-pypi --domain amazon --domain-owner 149122183214--profile aws-project-universe-team+sourcecode-Backend --region us-west-2
 ```
 
+## Google OAuth Setup (Required before first deploy)
+
+The CDK stack reads Google OAuth credentials from AWS SSM Parameter Store. Create these parameters before running `cdk deploy`:
+
+```bash
+# Store Google OAuth Client ID (plain string parameter)
+aws ssm put-parameter \
+  --name "/lmjm/google-oauth/client-id" \
+  --type "String" \
+  --value "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" \
+  --region sa-east-1
+
+# Store Google OAuth Client Secret (SecureString, encrypted with default KMS key)
+aws ssm put-parameter \
+  --name "/lmjm/google-oauth/client-secret" \
+  --type "SecureString" \
+  --value "YOUR_GOOGLE_CLIENT_SECRET" \
+  --region sa-east-1
+```
+
+To get these values, create an OAuth 2.0 Client ID at [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) with:
+- Application type: Web application
+- Authorized redirect URI: `https://<cognito-domain>.auth.sa-east-1.amazoncognito.com/oauth2/idpresponse`
+
+## Email Allowlist
+
+Access is restricted to allowlisted emails in DynamoDB. Add a user:
+
+```bash
+aws dynamodb put-item \
+  --table-name lmjm \
+  --item '{"pk": {"S": "EMAIL_ALLOWLIST"}, "sk": {"S": "user@gmail.com"}}' \
+  --region sa-east-1
+```
+
 ## Useful commands
 
 ```

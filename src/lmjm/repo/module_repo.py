@@ -1,7 +1,11 @@
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Optional
 
 from boto3.dynamodb.conditions import Key
-from mypy_boto3_dynamodb.service_resource import Table
+
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import Table
 
 from lmjm.model import Module, Warehouse
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, load_data_class_from_dict_list

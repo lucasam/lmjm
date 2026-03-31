@@ -5,12 +5,16 @@ import { loadConfig } from './config'
 import './i18n'
 import App from './App'
 
-loadConfig().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StrictMode>,
-  )
-})
+loadConfig()
+  .catch((err) => {
+    console.error('Failed to load config:', err)
+  })
+  .finally(() => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </StrictMode>,
+    )
+  })

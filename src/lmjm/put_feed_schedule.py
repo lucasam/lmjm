@@ -1,4 +1,3 @@
-import dataclasses
 import json
 import os
 import uuid
@@ -9,6 +8,7 @@ import boto3
 from lmjm.model import FeedSchedule
 from lmjm.repo import BatchRepo, FeedScheduleRepo
 from lmjm.util.marshmallow_serializer import serialize_to_dict_list
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -18,19 +18,12 @@ batch_repo = BatchRepo(table)
 feed_schedule_repo = FeedScheduleRepo(table)
 
 
-@dataclasses.dataclass
-class FeedScheduleEntry:
-    feed_type: str = ""
-    planned_date: str = ""
-    expected_amount_kg: float = 0.0
-
-
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     batch_id = event["pathParameters"]["batch_id"]
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     entries: list[dict[str, Any]] = json.loads(event["body"])
 
@@ -50,4 +43,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         feed_schedule_repo.put(schedule)
         new_schedules.append(schedule)
 
-    return {"statusCode": 200, "body": json.dumps(serialize_to_dict_list(new_schedules))}
+    return respond(body=serialize_to_dict_list(new_schedules))

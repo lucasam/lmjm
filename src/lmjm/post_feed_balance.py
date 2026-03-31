@@ -9,6 +9,7 @@ import boto3
 from lmjm.model import FeedBalance
 from lmjm.repo import BatchRepo, FeedBalanceRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -29,7 +30,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     request = load_data_class_from_dict(json.loads(event["body"]), PostFeedBalanceRequest)
 
@@ -38,11 +39,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         parsed_date = datetime.strptime(request.measurement_date, "%Y%m%d")
         measurement_date_stored = parsed_date.strftime("%Y-%m-%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "measurement_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="measurement_date must be in YYYYMMDD format")
 
     # Validate balance_kg non-negative
     if request.balance_kg < 0:
-        return {"statusCode": 400, "body": json.dumps({"message": "balance_kg must be non-negative"})}
+        return respond(status_code=400, error="balance_kg must be non-negative")
 
     date_str = parsed_date.strftime("%Y%m%d")
 
@@ -54,4 +55,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     feed_balance_repo.put(feed_balance)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(feed_balance))}
+    return respond(status_code=201, body=serialize_to_dict(feed_balance))

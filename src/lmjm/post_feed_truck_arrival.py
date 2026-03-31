@@ -10,6 +10,7 @@ import boto3
 from lmjm.model import FeedTruckArrival
 from lmjm.repo import BatchRepo, FeedScheduleRepo, FeedTruckArrivalRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -34,7 +35,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     request = load_data_class_from_dict(json.loads(event["body"]), PostFeedTruckArrivalRequest)
 
@@ -43,26 +44,26 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         parsed_date = datetime.strptime(request.receive_date, "%Y%m%d")
         receive_date_stored = parsed_date.strftime("%Y-%m-%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "receive_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="receive_date must be in YYYYMMDD format")
 
     # Validate fiscal_document_number
     if not request.fiscal_document_number or not request.fiscal_document_number.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "fiscal_document_number must be non-empty"})}
+        return respond(status_code=400, error="fiscal_document_number must be non-empty")
 
     # Validate actual_amount_kg
     if request.actual_amount_kg <= 0:
-        return {"statusCode": 400, "body": json.dumps({"message": "actual_amount_kg must be a positive number"})}
+        return respond(status_code=400, error="actual_amount_kg must be a positive number")
 
     # Validate feed_type
     if not request.feed_type or not request.feed_type.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "feed_type must be non-empty"})}
+        return respond(status_code=400, error="feed_type must be non-empty")
 
     # Validate feed_schedule_id if provided
     if request.feed_schedule_id:
         schedules = feed_schedule_repo.list(batch_id)
         schedule_sks = {s.sk for s in schedules}
         if request.feed_schedule_id not in schedule_sks:
-            return {"statusCode": 404, "body": json.dumps({"message": "FeedSchedule not found"})}
+            return respond(status_code=404, error="FeedSchedule not found")
 
     sequence = str(uuid.uuid4())
     date_str = parsed_date.strftime("%Y%m%d")
@@ -78,4 +79,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     feed_truck_arrival_repo.put(arrival)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(arrival))}
+    return respond(status_code=201, body=serialize_to_dict(arrival))

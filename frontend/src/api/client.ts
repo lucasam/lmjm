@@ -97,7 +97,7 @@ export interface PostFeedBalanceRequest {
 import { getConfig } from '../config';
 
 function getBaseUrl(): string {
-  return getConfig().apiUrl;
+  return getConfig().apiUrl.replace(/\/+$/, '');
 }
 
 class ApiError extends Error {
@@ -144,7 +144,7 @@ function clearTokensAndRedirect(): never {
 }
 
 async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('lmjm_access_token');
+  const token = localStorage.getItem('lmjm_id_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),

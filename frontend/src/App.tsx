@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -26,16 +27,36 @@ function OAuthCallback() {
   const [searchParams] = useSearchParams();
   const { handleCallback } = useAuth();
   const code = searchParams.get('code');
+  const [error, setError] = useState<string | null>(null);
+  const calledRef = useRef(false);
 
-  if (code) {
-    handleCallback(code).then(() => {
-      const from = (window.history.state?.usr?.from as string) || '/';
-      window.location.href = from;
-    });
-    return <div>Processing login...</div>;
+  useEffect(() => {
+    if (!code || calledRef.current) return;
+    calledRef.current = true;
+
+    handleCallback(code)
+      .then(() => {
+        window.location.href = '/';
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Login failed');
+      });
+  }, [code, handleCallback]);
+
+  if (error) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <p>{error}</p>
+        <a href="/login">Try again</a>
+      </div>
+    );
   }
 
-  return <Navigate to="/login" replace />;
+  if (!code) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <div style={{ padding: '2rem', textAlign: 'center' }}>Processing login...</div>;
 }
 
 function AppRoutes() {

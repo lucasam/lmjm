@@ -8,6 +8,7 @@ import boto3
 from lmjm.model import FeedConsumptionPlan
 from lmjm.repo import BatchRepo, FeedConsumptionPlanRepo
 from lmjm.util.marshmallow_serializer import serialize_to_dict_list
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -22,15 +23,15 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     try:
         entries: list[dict[str, Any]] = json.loads(event["body"])
     except (json.JSONDecodeError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "Invalid JSON body"})}
+        return respond(status_code=400, error="Invalid JSON body")
 
     if not isinstance(entries, list):
-        return {"statusCode": 400, "body": json.dumps({"message": "Body must be a JSON array"})}
+        return respond(status_code=400, error="Body must be a JSON array")
 
     # Validate each entry
     for entry in entries:
@@ -38,18 +39,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         expected_grams = entry.get("expected_grams_per_animal")
 
         if not isinstance(day_number, int) or day_number < 1 or day_number > 130:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"message": f"day_number must be an integer between 1 and 130, got {day_number}"}),
-            }
+            return respond(
+                status_code=400,
+                error=f"day_number must be an integer between 1 and 130, got {day_number}",
+            )
 
         if not isinstance(expected_grams, (int, float)) or expected_grams <= 0:
-            return {
-                "statusCode": 400,
-                "body": json.dumps(
-                    {"message": f"expected_grams_per_animal must be a positive number, got {expected_grams}"}
-                ),
-            }
+            return respond(
+                status_code=400,
+                error=f"expected_grams_per_animal must be a positive number, got {expected_grams}",
+            )
 
     # Delete all existing feed consumption plan entries for this batch
     feed_consumption_plan_repo.delete_all(batch_id)
@@ -73,4 +72,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     feed_consumption_plan_repo.put_all(new_plans)
 
-    return {"statusCode": 200, "body": json.dumps(serialize_to_dict_list(new_plans))}
+    return respond(body=serialize_to_dict_list(new_plans))

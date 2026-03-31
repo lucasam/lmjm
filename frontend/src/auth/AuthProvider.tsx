@@ -17,6 +17,7 @@ interface AuthUser {
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  loading: boolean;
   user: AuthUser | null;
   login(): void;
   handleCallback(code: string): Promise<void>;
@@ -41,18 +42,49 @@ function parseUserFromIdToken(idToken: string): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // On mount: check if tokens exist and parse user
+  // On mount: check tokens, try refresh if expired
   useEffect(() => {
-    const idToken = getStoredIdToken();
-    const accessToken = getStoredAccessToken();
-    if (idToken && accessToken) {
-      const parsed = parseUserFromIdToken(idToken);
-      if (parsed) {
-        setUser(parsed);
-        setIsAuthenticated(true);
+    async function init() {
+      const idToken = getStoredIdToken();
+      const accessToken = getStoredAccessToken();
+
+      // Case 1: valid tokens exist
+      if (accessToken && !isTokenExpired(accessToken) && idToken) {
+        const parsed = parseUserFromIdToken(idToken);
+        if (parsed) {
+          setUser(parsed);
+          setIsAuthenticated(true);
+          setLoading(false);
+          return;
+        }
       }
+
+      // Case 2: tokens expired but refresh token exists — try refresh
+      const refreshTokenStored = localStorage.getItem('lmjm_refresh_token');
+      if (refreshTokenStored) {
+        const newToken = await cognitoRefreshToken();
+        if (newToken) {
+          const freshIdToken = getStoredIdToken();
+          if (freshIdToken) {
+            const parsed = parseUserFromIdToken(freshIdToken);
+            if (parsed) {
+              setUser(parsed);
+              setIsAuthenticated(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      }
+
+      // Case 3: no valid tokens, not refreshable
+      setIsAuthenticated(false);
+      setLoading(false);
     }
+
+    init();
   }, []);
 
   const login = useCallback(() => {
@@ -79,10 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return token;
     }
 
-    // Token expired or missing — attempt refresh
     const newToken = await cognitoRefreshToken();
     if (newToken) {
-      // Also update user from refreshed id token
       const idToken = getStoredIdToken();
       if (idToken) {
         const parsed = parseUserFromIdToken(idToken);
@@ -91,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return newToken;
     }
 
-    // Refresh failed — clear tokens and redirect to login
     cognitoLogout();
     setUser(null);
     setIsAuthenticated(false);
@@ -101,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     isAuthenticated,
+    loading,
     user,
     login,
     handleCallback,

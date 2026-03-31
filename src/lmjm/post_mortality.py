@@ -10,6 +10,7 @@ import boto3
 from lmjm.model import Mortality
 from lmjm.repo import BatchRepo, MortalityRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -33,7 +34,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     request = load_data_class_from_dict(json.loads(event["body"]), PostMortalityRequest)
 
@@ -42,23 +43,23 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         parsed_date = datetime.strptime(request.mortality_date, "%Y%m%d")
         mortality_date_stored = parsed_date.strftime("%Y-%m-%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "mortality_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="mortality_date must be in YYYYMMDD format")
 
     # Validate sex
     if request.sex not in ("Male", "Female"):
-        return {"statusCode": 400, "body": json.dumps({"message": "sex must be Male or Female"})}
+        return respond(status_code=400, error="sex must be Male or Female")
 
     # Validate origin
     if not request.origin or not request.origin.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "origin must be non-empty"})}
+        return respond(status_code=400, error="origin must be non-empty")
 
     # Validate death_reason
     if not request.death_reason or not request.death_reason.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "death_reason must be non-empty"})}
+        return respond(status_code=400, error="death_reason must be non-empty")
 
     # Validate reported_by
     if not request.reported_by or not request.reported_by.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "reported_by must be non-empty"})}
+        return respond(status_code=400, error="reported_by must be non-empty")
 
     sequence = str(uuid.uuid4())
     date_str = parsed_date.strftime("%Y%m%d")
@@ -74,4 +75,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     mortality_repo.put(mortality)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(mortality))}
+    return respond(status_code=201, body=serialize_to_dict(mortality))

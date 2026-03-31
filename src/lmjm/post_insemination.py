@@ -9,6 +9,7 @@ import boto3
 from lmjm.model import Insemination
 from lmjm.repo import AnimalRepo, InseminationRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -32,11 +33,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     try:
         parsed = datetime.strptime(request.insemination_date, "%Y%m%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "insemination_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="insemination_date must be in YYYYMMDD format")
 
     animal = animal_repo.get_by_ear_tag(ear_tag)
     if not animal:
-        return {"statusCode": 404, "body": json.dumps({"message": "Animal not found"})}
+        return respond(status_code=404, error="Animal not found")
 
     insemination = Insemination(
         pk=animal.pk,
@@ -61,4 +62,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     animal_repo.update(animal)
 
-    return {"statusCode": 201, "body": json.dumps({"message": "Insemination created"})}
+    return respond(status_code=201, body={"message": "Insemination created"})

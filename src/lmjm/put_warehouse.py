@@ -8,6 +8,7 @@ import boto3
 from lmjm.model import Warehouse
 from lmjm.repo import WarehouseRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -39,4 +40,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     warehouse_repo.update(warehouse)
 
-    return {"statusCode": 200, "body": json.dumps(serialize_to_dict(warehouse))}
+    return respond(body=serialize_to_dict(warehouse))

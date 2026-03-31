@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import date, datetime
 from typing import Any
@@ -7,6 +6,7 @@ import boto3
 
 from lmjm.repo import BatchRepo, PigTruckArrivalRepo
 from lmjm.util.marshmallow_serializer import serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -21,11 +21,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     arrivals = pig_truck_arrival_repo.list(batch_id)
     if not arrivals:
-        return {"statusCode": 400, "body": json.dumps({"message": "No pig truck arrivals recorded for this batch"})}
+        return respond(status_code=400, error="No pig truck arrivals recorded for this batch")
 
     # Compute total_animal_count
     total_animal_count: int = sum(a.animal_count for a in arrivals)
@@ -51,4 +51,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     batch.status = "in_progress"
     batch_repo.update(batch)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(batch))}
+    return respond(status_code=201, body=serialize_to_dict(batch))

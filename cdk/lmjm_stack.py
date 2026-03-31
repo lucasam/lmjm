@@ -1,4 +1,9 @@
+import subprocess
+
+import aws_cdk as cdk
+import jsii
 from aws_cdk import (
+    BundlingOptions,
     CfnOutput,
     Duration,
     SecretValue,
@@ -12,22 +17,76 @@ from aws_cdk import aws_dynamodb as dynamodb
 from aws_cdk import aws_lambda as _lambda
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_s3_deployment as s3deploy
+from aws_cdk import aws_ssm as ssm
 from constructs import Construct
+
+
+@jsii.implements(cdk.ILocalBundling)
+class _BundleLambdaCode:
+    """Local bundling: pip install runtime deps + copy source into the output directory."""
+
+    def try_bundle(self, output_dir: str, *, image: cdk.DockerImage) -> bool:
+        subprocess.check_call(["pip", "install", "-r", "src/requirements.txt", "-t", output_dir, "--quiet"])
+        subprocess.check_call(["cp", "-r", "src/lmjm", f"{output_dir}/lmjm"])
+        # Remove type-stub packages not needed at runtime
+        for pkg in [
+            "mypy_boto3_dynamodb",
+            "mypy_boto3_lambda",
+            "boto3_stubs",
+            "botocore_stubs",
+            "types_awscrt",
+            "types_s3transfer",
+            "mypy_extensions",
+        ]:
+            subprocess.call(["rm", "-rf", f"{output_dir}/{pkg}"])
+        return True
 
 
 class LmjmStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # Shared Lambda code asset with runtime dependencies bundled
+        lambda_code = _lambda.Code.from_asset(
+            "src",
+            bundling=BundlingOptions(
+                image=_lambda.Runtime.PYTHON_3_12.bundling_image,
+                command=[
+                    "bash",
+                    "-c",
+                    "pip install -r requirements.txt -t /asset-output"
+                    " && cp -r . /asset-output/"
+                    " && find /asset-output -name '*.pyc' -delete"
+                    " && rm -rf /asset-output/mypy_boto3_dynamodb /asset-output/mypy_boto3_lambda"
+                    " /asset-output/boto3_stubs /asset-output/botocore_stubs"
+                    " /asset-output/types_awscrt /asset-output/types_s3transfer"
+                    " /asset-output/mypy_extensions",
+                ],
+                local=_BundleLambdaCode(),
+            ),
+        )
+
         _lambda.Function(
             self,
             "LmjmFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.handler.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
         )
 
-        table = dynamodb.Table.from_table_name(self, "GadoTable", "gado")
+        table = dynamodb.Table(
+            self,
+            "LmjmTable",
+            table_name="lmjm",
+            partition_key=dynamodb.Attribute(name="pk", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="sk", type=dynamodb.AttributeType.STRING),
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+        )
+        table.add_global_secondary_index(
+            index_name="ear_tag-sk-index",
+            partition_key=dynamodb.Attribute(name="ear_tag", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="sk", type=dynamodb.AttributeType.STRING),
+        )
 
         # --- S3 + CloudFront for frontend hosting ---
 
@@ -68,6 +127,7 @@ class LmjmStack(Stack):
             sources=[s3deploy.Source.asset("frontend/dist")],
             destination_bucket=frontend_bucket,
             distribution=distribution,
+            prune=False,
         )
 
         CfnOutput(
@@ -84,7 +144,7 @@ class LmjmStack(Stack):
             "PreSignupFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.pre_signup.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(pre_signup_lambda)
@@ -98,12 +158,17 @@ class LmjmStack(Stack):
             ),
         )
 
+        google_client_id = ssm.StringParameter.value_for_string_parameter(self, "/lmjm/google-oauth/client-id")
+        google_client_secret_value = ssm.StringParameter.value_for_string_parameter(
+            self, "/lmjm/google-oauth/client-secret"
+        )
+
         google_idp = cognito.UserPoolIdentityProviderGoogle(
             self,
             "GoogleIdP",
             user_pool=user_pool,
-            client_id="PLACEHOLDER_GOOGLE_CLIENT_ID",
-            client_secret_value=SecretValue.unsafe_plain_text("PLACEHOLDER_GOOGLE_CLIENT_SECRET"),
+            client_id=google_client_id,
+            client_secret_value=SecretValue.unsafe_plain_text(google_client_secret_value),
             scopes=["openid", "email", "profile"],
             attribute_mapping=cognito.AttributeMapping(
                 email=cognito.ProviderAttribute.GOOGLE_EMAIL,
@@ -115,6 +180,7 @@ class LmjmStack(Stack):
             self,
             "LmjmUserPoolClient",
             user_pool=user_pool,
+            generate_secret=False,
             o_auth=cognito.OAuthSettings(
                 flows=cognito.OAuthFlows(authorization_code_grant=True),
                 scopes=[
@@ -168,7 +234,7 @@ class LmjmStack(Stack):
             "PostDiagnosticFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_diagnostic.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_diagnostic)
@@ -178,7 +244,7 @@ class LmjmStack(Stack):
             "PostInseminationFunction",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_insemination.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_insemination)
@@ -208,6 +274,22 @@ class LmjmStack(Stack):
             provider_arns=[user_pool.user_pool_arn],
         )
 
+        # Add CORS headers to gateway error responses (authorizer rejections don't go through Lambda)
+        for response_type in [
+            apigw.ResponseType.UNAUTHORIZED,
+            apigw.ResponseType.ACCESS_DENIED,
+            apigw.ResponseType.DEFAULT_4_XX,
+        ]:
+            api.add_gateway_response(
+                f"GatewayResponse{response_type.response_type}",
+                type=response_type,
+                response_headers={
+                    "Access-Control-Allow-Origin": f"'{cloudfront_origin}'",
+                    "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+                    "Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
+                },
+            )
+
         # Create top-level resources for cattle and pig routes
         cattle_resource = api.root.add_resource("cattle")
         pigs_resource = api.root.add_resource("pigs")
@@ -231,7 +313,7 @@ class LmjmStack(Stack):
             "GetCattleAnimalsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_cattle_animals.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_cattle_animals)
@@ -241,7 +323,7 @@ class LmjmStack(Stack):
             "GetCattleAnimalLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_cattle_animal.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_cattle_animal)
@@ -251,7 +333,7 @@ class LmjmStack(Stack):
             "GetInseminationsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_inseminations.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_inseminations)
@@ -261,7 +343,7 @@ class LmjmStack(Stack):
             "GetDiagnosticsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_diagnostics.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_diagnostics_lambda)
@@ -293,7 +375,7 @@ class LmjmStack(Stack):
             "GetModulesLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_modules.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_modules)
@@ -303,7 +385,7 @@ class LmjmStack(Stack):
             "GetModuleLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_module.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_module)
@@ -313,7 +395,7 @@ class LmjmStack(Stack):
             "PostWarehouseLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_warehouse.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_warehouse)
@@ -323,7 +405,7 @@ class LmjmStack(Stack):
             "PutWarehouseLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.put_warehouse.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(put_warehouse)
@@ -335,7 +417,7 @@ class LmjmStack(Stack):
             "GetBatchesLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_batches.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_batches)
@@ -345,7 +427,7 @@ class LmjmStack(Stack):
             "GetBatchLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_batch.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_batch)
@@ -355,7 +437,7 @@ class LmjmStack(Stack):
             "PostBatchLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_batch.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_batch)
@@ -367,7 +449,7 @@ class LmjmStack(Stack):
             "PostFeedTruckArrivalLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_feed_truck_arrival.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_feed_truck_arrival)
@@ -377,7 +459,7 @@ class LmjmStack(Stack):
             "GetFeedTruckArrivalsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_feed_truck_arrivals.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_feed_truck_arrivals)
@@ -387,7 +469,7 @@ class LmjmStack(Stack):
             "GetFeedScheduleLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_feed_schedule.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_feed_schedule)
@@ -397,7 +479,7 @@ class LmjmStack(Stack):
             "PutFeedScheduleLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.put_feed_schedule.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(put_feed_schedule)
@@ -409,7 +491,7 @@ class LmjmStack(Stack):
             "PostPigTruckArrivalLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_pig_truck_arrival.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_pig_truck_arrival)
@@ -419,7 +501,7 @@ class LmjmStack(Stack):
             "GetPigTruckArrivalsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_pig_truck_arrivals.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_pig_truck_arrivals)
@@ -431,7 +513,7 @@ class LmjmStack(Stack):
             "PostBatchStartSummaryLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_batch_start_summary.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_batch_start_summary)
@@ -443,7 +525,7 @@ class LmjmStack(Stack):
             "PostMortalityLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_mortality.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_mortality)
@@ -453,7 +535,7 @@ class LmjmStack(Stack):
             "GetMortalitiesLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_mortalities.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_mortalities)
@@ -465,7 +547,7 @@ class LmjmStack(Stack):
             "PostMedicationLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_medication.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_medication)
@@ -475,7 +557,7 @@ class LmjmStack(Stack):
             "GetMedicationsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_medications.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_medications)
@@ -485,7 +567,7 @@ class LmjmStack(Stack):
             "PostMedicationShotLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_medication_shot.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_medication_shot)
@@ -495,7 +577,7 @@ class LmjmStack(Stack):
             "GetMedicationShotsLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_medication_shots.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_medication_shots)
@@ -507,7 +589,7 @@ class LmjmStack(Stack):
             "PutFeedConsumptionPlanLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.put_feed_consumption_plan.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(put_feed_consumption_plan)
@@ -517,7 +599,7 @@ class LmjmStack(Stack):
             "GetFeedConsumptionPlanLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_feed_consumption_plan.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_feed_consumption_plan)
@@ -529,7 +611,7 @@ class LmjmStack(Stack):
             "PostFeedBalanceLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.post_feed_balance.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_feed_balance)
@@ -539,7 +621,7 @@ class LmjmStack(Stack):
             "GetFeedBalancesLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
             handler="lmjm.get_feed_balances.lambda_handler",
-            code=_lambda.Code.from_asset("src"),
+            code=lambda_code,
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_data(get_feed_balances)
@@ -644,4 +726,5 @@ class LmjmStack(Stack):
             destination_bucket=frontend_bucket,
             distribution=distribution,
             distribution_paths=["/config.json"],
+            prune=False,
         )

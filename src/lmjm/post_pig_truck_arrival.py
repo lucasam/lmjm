@@ -10,6 +10,7 @@ import boto3
 from lmjm.model import PigTruckArrival
 from lmjm.repo import BatchRepo, PigTruckArrivalRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -34,36 +35,36 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     batch = batch_repo.get(batch_id)
     if not batch:
-        return {"statusCode": 404, "body": json.dumps({"message": "Batch not found"})}
+        return respond(status_code=404, error="Batch not found")
 
     request = load_data_class_from_dict(json.loads(event["body"]), PostPigTruckArrivalRequest)
 
     # Validate animal_count
     if request.animal_count <= 0:
-        return {"statusCode": 400, "body": json.dumps({"message": "animal_count must be a positive integer"})}
+        return respond(status_code=400, error="animal_count must be a positive integer")
 
     # Validate sex
     if request.sex not in ("Male", "Female"):
-        return {"statusCode": 400, "body": json.dumps({"message": "sex must be Male or Female"})}
+        return respond(status_code=400, error="sex must be Male or Female")
 
     # Validate arrival_date
     try:
         parsed_date = datetime.strptime(request.arrival_date, "%Y%m%d")
         arrival_date_stored = parsed_date.strftime("%Y-%m-%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "arrival_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="arrival_date must be in YYYYMMDD format")
 
     # Validate pig_age_days
     if request.pig_age_days <= 0:
-        return {"statusCode": 400, "body": json.dumps({"message": "pig_age_days must be a positive integer"})}
+        return respond(status_code=400, error="pig_age_days must be a positive integer")
 
     # Validate origin_name
     if not request.origin_name or not request.origin_name.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "origin_name must be non-empty"})}
+        return respond(status_code=400, error="origin_name must be non-empty")
 
     # Validate origin_type
     if request.origin_type not in ("UPL", "Creche"):
-        return {"statusCode": 400, "body": json.dumps({"message": "origin_type must be UPL or Creche"})}
+        return respond(status_code=400, error="origin_type must be UPL or Creche")
 
     sequence = str(uuid.uuid4())
     date_str = parsed_date.strftime("%Y%m%d")
@@ -80,4 +81,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     pig_truck_arrival_repo.put(arrival)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(arrival))}
+    return respond(status_code=201, body=serialize_to_dict(arrival))

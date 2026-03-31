@@ -23,6 +23,7 @@ htmlcov/
 # CDK
 cdk.out/
 cdk.context.json
+cdk-verify.out/
 
 # Frontend
 frontend/node_modules/

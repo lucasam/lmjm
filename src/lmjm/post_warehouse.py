@@ -9,6 +9,7 @@ import boto3
 from lmjm.model import Warehouse
 from lmjm.repo import WarehouseRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -30,10 +31,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     request = load_data_class_from_dict(json.loads(event["body"]), PostWarehouseRequest)
 
     if not request.name or not request.name.strip():
-        return {"statusCode": 400, "body": json.dumps({"message": "name must be non-empty"})}
+        return respond(status_code=400, error="name must be non-empty")
 
     if not isinstance(request.supported_animal_count, int) or request.supported_animal_count <= 0:
-        return {"statusCode": 400, "body": json.dumps({"message": "supported_animal_count must be a positive integer"})}
+        return respond(status_code=400, error="supported_animal_count must be a positive integer")
 
     warehouse_id = str(uuid.uuid4())
 
@@ -47,4 +48,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
     warehouse_repo.put(warehouse)
 
-    return {"statusCode": 201, "body": json.dumps(serialize_to_dict(warehouse))}
+    return respond(status_code=201, body=serialize_to_dict(warehouse))

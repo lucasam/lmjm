@@ -9,6 +9,7 @@ import boto3
 from lmjm.model import Diagnostic
 from lmjm.repo import AnimalRepo, DiagnosticRepo, InseminationRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict
+from lmjm.util.response import respond
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 dynamodb = boto3.resource("dynamodb", region_name="sa-east-1")
@@ -36,15 +37,15 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     try:
         diagnostic_date = datetime.strptime(request.diagnostic_date, "%Y%m%d")
     except (ValueError, TypeError):
-        return {"statusCode": 400, "body": json.dumps({"message": "diagnostic_date must be in YYYYMMDD format"})}
+        return respond(status_code=400, error="diagnostic_date must be in YYYYMMDD format")
 
     if not animal:
-        return {"statusCode": 404, "body": json.dumps({"message": "Animal not found"})}
+        return respond(status_code=404, error="Animal not found")
 
     insemination = insemination_repo.get_latest(animal.pk)
 
     if not insemination:
-        return {"statusCode": 404, "body": json.dumps({"message": "No insemination found"})}
+        return respond(status_code=404, error="No insemination found")
 
     expected_delivery_date = (
         datetime.strptime(insemination.insemination_date, "%Y-%m-%d") + timedelta(days=292)
@@ -85,4 +86,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         animal.tags.append(request.tags)
     animal_repo.update(animal)
 
-    return {"statusCode": 201, "body": json.dumps({"message": "Diagnostic created"})}
+    return respond(status_code=201, body={"message": "Diagnostic created"})
