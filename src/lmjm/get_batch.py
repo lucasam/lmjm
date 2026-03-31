@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -15,7 +16,7 @@ batch_repo = BatchRepo(table)
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    batch_id: str = event["pathParameters"]["batch_id"]
+    batch_id: str = unquote(event["pathParameters"]["batch_id"])
     batch = batch_repo.get(batch_id)
     if not batch:
         return respond(status_code=404, error="Batch not found")

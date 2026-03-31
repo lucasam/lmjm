@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 from typing import Any, Optional
+from urllib.parse import unquote
 
 import boto3
 
@@ -27,7 +28,7 @@ class PostInseminationRequest:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    ear_tag = event["pathParameters"]["animal_id"]
+    ear_tag = unquote(event["pathParameters"]["animal_id"])
     request = load_data_class_from_dict(json.loads(event["body"]), PostInseminationRequest)
 
     try:

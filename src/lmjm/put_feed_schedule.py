@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -19,7 +20,7 @@ feed_schedule_repo = FeedScheduleRepo(table)
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    batch_id = event["pathParameters"]["batch_id"]
+    batch_id = unquote(event["pathParameters"]["batch_id"])
 
     batch = batch_repo.get(batch_id)
     if not batch:

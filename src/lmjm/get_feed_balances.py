@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -15,6 +16,6 @@ feed_balance_repo = FeedBalanceRepo(table)
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    batch_id: str = event["pathParameters"]["batch_id"]
+    batch_id: str = unquote(event["pathParameters"]["batch_id"])
     balances = feed_balance_repo.list(batch_id)
     return respond(body=serialize_to_dict_list(balances))

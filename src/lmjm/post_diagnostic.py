@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
+from urllib.parse import unquote
 
 import boto3
 
@@ -29,7 +30,7 @@ class PostDiagnosticRequest:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    ear_tag = event["pathParameters"]["animal_id"]
+    ear_tag = unquote(event["pathParameters"]["animal_id"])
     request = load_data_class_from_dict(json.loads(event["body"]), PostDiagnosticRequest)
 
     animal = animal_repo.get_by_ear_tag(ear_tag)

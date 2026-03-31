@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -27,7 +28,7 @@ class PostWarehouseRequest:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    module_id = event["pathParameters"]["module_id"]
+    module_id = unquote(event["pathParameters"]["module_id"])
     request = load_data_class_from_dict(json.loads(event["body"]), PostWarehouseRequest)
 
     if not request.name or not request.name.strip():

@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -16,7 +17,7 @@ diagnostic_repo = DiagnosticRepo(table)
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    ear_tag: str = event["pathParameters"]["animal_id"]
+    ear_tag: str = unquote(event["pathParameters"]["animal_id"])
     animal = animal_repo.get_by_ear_tag(ear_tag)
     if not animal:
         return respond(status_code=404, error="Animal not found")

@@ -2,6 +2,7 @@ import dataclasses
 import json
 import os
 from typing import Any
+from urllib.parse import unquote
 
 import boto3
 
@@ -26,8 +27,8 @@ class PutWarehouseRequest:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    module_id = event["pathParameters"]["module_id"]
-    warehouse_id = event["pathParameters"]["warehouse_id"]
+    module_id = unquote(event["pathParameters"]["module_id"])
+    warehouse_id = unquote(event["pathParameters"]["warehouse_id"])
     request = load_data_class_from_dict(json.loads(event["body"]), PutWarehouseRequest)
 
     warehouse = Warehouse(
