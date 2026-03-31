@@ -14,7 +14,6 @@ class Batch:
     module_id: str = ""
     receive_date: str = ""
     expected_slaughter_date: Optional[str] = None
-    pig_count: int = 0
     min_feed_stock_threshold: int = 0
     total_animal_count: Optional[int] = None
     average_start_date: Optional[str] = None

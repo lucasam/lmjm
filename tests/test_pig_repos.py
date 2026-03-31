@@ -142,7 +142,7 @@ def test_module_repo_list_returns_all_modules() -> None:
 def test_batch_repo_get_returns_batch() -> None:
     """Requirement 7.17: BatchRepo.get returns a Batch by pk."""
     table = _create_table()
-    _put(table, Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1", pig_count=500))
+    _put(table, Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1"))
 
     repo = BatchRepo(table)
     result = repo.get("batch-1")

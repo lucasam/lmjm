@@ -47,7 +47,6 @@ export interface Batch {
   module_id: string;
   receive_date: string;
   expected_slaughter_date?: string;
-  pig_count: number;
   min_feed_stock_threshold: number;
   // Start summary (optional, populated after trigger)
   total_animal_count?: number;
@@ -84,6 +83,11 @@ export interface PigTruckArrival {
   pig_age_days: number;
   origin_name: string;
   origin_type: 'UPL' | 'Creche';
+  fiscal_document_number?: string;
+  animal_weight?: number;
+  gta_number?: string;
+  mossa?: string;
+  suplier_code?: number;
 }
 
 export interface Mortality {

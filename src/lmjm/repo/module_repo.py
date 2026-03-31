@@ -8,7 +8,11 @@ if TYPE_CHECKING:
     from mypy_boto3_dynamodb.service_resource import Table
 
 from lmjm.model import Module
-from lmjm.util.marshmallow_serializer import load_data_class_from_dict, load_data_class_from_dict_list
+from lmjm.util.marshmallow_serializer import (
+    load_data_class_from_dict,
+    load_data_class_from_dict_list,
+    serialize_to_dict,
+)
 
 
 class ModuleRepo:
@@ -31,3 +35,6 @@ class ModuleRepo:
             response = self.table.scan(FilterExpression=filter_expr, ExclusiveStartKey=response["LastEvaluatedKey"])
             items.extend(response.get("Items", []))
         return load_data_class_from_dict_list(items, Module)
+
+    def update(self, module: Module) -> None:
+        self.table.put_item(Item=serialize_to_dict(module))

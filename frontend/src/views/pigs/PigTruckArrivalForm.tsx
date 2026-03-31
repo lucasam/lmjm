@@ -16,6 +16,11 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
   const [pigAgeDays, setPigAgeDays] = useState('');
   const [originName, setOriginName] = useState('');
   const [originType, setOriginType] = useState<'UPL' | 'Creche'>('UPL');
+  const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState('');
+  const [animalWeight, setAnimalWeight] = useState('');
+  const [gtaNumber, setGtaNumber] = useState('');
+  const [mossa, setMossa] = useState('');
+  const [suplierCode, setSuplierCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -32,6 +37,11 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
         pig_age_days: Number(pigAgeDays),
         origin_name: originName,
         origin_type: originType,
+        ...(fiscalDocumentNumber ? { fiscal_document_number: fiscalDocumentNumber } : {}),
+        ...(animalWeight ? { animal_weight: Number(animalWeight) } : {}),
+        ...(gtaNumber ? { gta_number: gtaNumber } : {}),
+        ...(mossa ? { mossa } : {}),
+        ...(suplierCode ? { suplier_code: Number(suplierCode) } : {}),
       });
       setSuccess(true);
       setTimeout(onSuccess, 800);
@@ -85,6 +95,31 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
               <option value="UPL">{t('pigs.upl')}</option>
               <option value="Creche">{t('pigs.creche')}</option>
             </select>
+          </label>
+
+          <label style={labelStyle}>
+            {t('pigs.fiscalDocumentNumber')}
+            <input type="text" value={fiscalDocumentNumber} onChange={(e) => setFiscalDocumentNumber(e.target.value)} style={inputStyle} />
+          </label>
+
+          <label style={labelStyle}>
+            {t('pigs.animalWeight')}
+            <input type="number" min="0" step="1" value={animalWeight} onChange={(e) => setAnimalWeight(e.target.value)} style={inputStyle} />
+          </label>
+
+          <label style={labelStyle}>
+            {t('pigs.gtaNumber')}
+            <input type="text" value={gtaNumber} onChange={(e) => setGtaNumber(e.target.value)} style={inputStyle} />
+          </label>
+
+          <label style={labelStyle}>
+            {t('pigs.mossa')}
+            <input type="text" value={mossa} onChange={(e) => setMossa(e.target.value)} style={inputStyle} />
+          </label>
+
+          <label style={labelStyle}>
+            {t('pigs.suplierCode')}
+            <input type="number" min="0" step="1" value={suplierCode} onChange={(e) => setSuplierCode(e.target.value)} style={inputStyle} />
           </label>
 
           <div style={btnRow}>

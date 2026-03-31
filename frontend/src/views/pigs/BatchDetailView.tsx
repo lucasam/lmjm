@@ -13,6 +13,7 @@ import {
   createBatchStartSummary,
   getFeedConsumptionPlan,
   listFeedBalances,
+  updateBatch,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
@@ -45,6 +46,7 @@ type ModalType =
   | 'medicationShot'
   | 'feedPlan'
   | 'feedBalance'
+  | 'editBatch'
   | null;
 
 export default function BatchDetailView() {
@@ -173,7 +175,6 @@ export default function BatchDetailView() {
           <div style={detailGrid}>
             <DetailRow label={t('pigs.status')} value={statusLabel(batch.status)} />
             <DetailRow label={t('pigs.supplyId')} value={String(batch.supply_id)} />
-            <DetailRow label={t('pigs.pigCount')} value={String(batch.pig_count)} />
             <DetailRow label={t('pigs.receiveDate')} value={formatDate(batch.receive_date)} />
             <DetailRow label={t('pigs.expectedSlaughterDate')} value={batch.expected_slaughter_date ? formatDate(batch.expected_slaughter_date) : undefined} />
             <DetailRow label={t('pigs.minFeedStockThreshold')} value={formatNumber(batch.min_feed_stock_threshold)} />
@@ -191,6 +192,13 @@ export default function BatchDetailView() {
               </div>
             </>
           )}
+
+          {/* Edit batch button */}
+          <div style={actionBar}>
+            <button type="button" style={actionBtn} onClick={() => setModal('editBatch')}>
+              {t('common.edit')} {t('pigs.batchDetail')}
+            </button>
+          </div>
 
           {/* Trigger start summary button */}
           {batch.status === 'created' && (
@@ -273,6 +281,14 @@ export default function BatchDetailView() {
       {modal === 'feedBalance' && (
         <FeedBalanceForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rBalances)} />
       )}
+      {modal === 'editBatch' && batch && (
+        <BatchEditForm
+          batchId={id}
+          initial={batch}
+          onClose={() => setModal(null)}
+          onSuccess={() => { setModal(null); rBatch(); }}
+        />
+      )}
     </Layout>
   );
 }
@@ -309,3 +325,117 @@ const linkBtn: React.CSSProperties = {
   cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
 };
 const inlineError: React.CSSProperties = { color: '#721c24', fontSize: '0.85rem', alignSelf: 'center' };
+
+
+function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
+  batchId: string;
+  initial: { status: string; supply_id: number; module_id: string; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number };
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState(initial.status);
+  const [supplyId, setSupplyId] = useState(String(initial.supply_id));
+  const [moduleId, setModuleId] = useState(initial.module_id);
+  const [receiveDate, setReceiveDate] = useState(initial.receive_date);
+  const [expectedSlaughterDate, setExpectedSlaughterDate] = useState(initial.expected_slaughter_date ?? '');
+  const [minFeedStockThreshold, setMinFeedStockThreshold] = useState(String(initial.min_feed_stock_threshold));
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await updateBatch(batchId, {
+        status,
+        supply_id: Number(supplyId),
+        module_id: moduleId,
+        receive_date: receiveDate.replace(/-/g, ''),
+        ...(expectedSlaughterDate ? { expected_slaughter_date: expectedSlaughterDate.replace(/-/g, '') } : {}),
+        min_feed_stock_threshold: Number(minFeedStockThreshold),
+      });
+      setSuccess(true);
+      setTimeout(onSuccess, 600);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div style={editOverlay} onClick={onClose} role="presentation">
+      <div style={editModal} onClick={(e) => e.stopPropagation()}>
+        <h2 style={editTitle}>{t('pigs.editBatch', 'Editar Lote')}</h2>
+        {success && <div style={editSuccess}>✓ {t('common.save')}</div>}
+        {formError && <div style={editError}>{formError}</div>}
+        <form onSubmit={handleSubmit}>
+          <label style={editLabel}>
+            {t('pigs.status')}
+            <select value={status} onChange={(e) => setStatus(e.target.value)} style={editInput}>
+              <option value="created">{t('pigs.statusCreated')}</option>
+              <option value="in_progress">{t('pigs.statusInProgress')}</option>
+              <option value="delivered">{t('pigs.statusDelivered')}</option>
+            </select>
+          </label>
+          <label style={editLabel}>
+            {t('pigs.supplyId')}
+            <input type="number" min="0" step="1" value={supplyId} onChange={(e) => setSupplyId(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.modules')}
+            <input type="text" value={moduleId} onChange={(e) => setModuleId(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.receiveDate')}
+            <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.expectedSlaughterDate')}
+            <input type="date" value={expectedSlaughterDate} onChange={(e) => setExpectedSlaughterDate(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.minFeedStockThreshold')}
+            <input type="number" min="0" step="1" value={minFeedStockThreshold} onChange={(e) => setMinFeedStockThreshold(e.target.value)} style={editInput} />
+          </label>
+          <div style={editBtnRow}>
+            <button type="button" style={editCancelBtn} onClick={onClose}>{t('common.cancel')}</button>
+            <button type="submit" style={editSubmitBtn} disabled={submitting}>
+              {submitting ? t('common.loading') : t('common.submit')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const editOverlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: '1rem',
+};
+const editModal: React.CSSProperties = {
+  backgroundColor: '#fff', borderRadius: '8px', padding: '1.5rem',
+  width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto',
+};
+const editTitle: React.CSSProperties = { fontSize: '1.15rem', fontWeight: 600, marginBottom: '1rem' };
+const editLabel: React.CSSProperties = { display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 500, color: '#333' };
+const editInput: React.CSSProperties = {
+  display: 'block', width: '100%', padding: '10px', marginTop: '0.25rem',
+  border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem', boxSizing: 'border-box', minHeight: '44px',
+};
+const editBtnRow: React.CSSProperties = { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' };
+const editCancelBtn: React.CSSProperties = {
+  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
+  backgroundColor: '#eee', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem',
+};
+const editSubmitBtn: React.CSSProperties = {
+  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
+  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
+  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+};
+const editSuccess: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#e8f5e9', borderRadius: '4px', color: '#2e7d32' };
+const editError: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#fdecea', borderRadius: '4px', color: '#721c24' };

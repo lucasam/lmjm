@@ -44,7 +44,7 @@ export default function PigDashboard() {
   const batchCols: Column<Batch>[] = [
     { header: t('pigs.status'), accessor: (r) => statusLabel(r.status) },
     { header: t('pigs.supplyId'), accessor: (r) => String(r.supply_id) },
-    { header: t('pigs.pigCount'), accessor: (r) => String(r.pig_count) },
+    { header: t('pigs.totalAnimalCount'), accessor: (r) => r.total_animal_count != null ? String(r.total_animal_count) : '—' },
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
   ];
 

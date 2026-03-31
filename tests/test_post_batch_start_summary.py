@@ -58,7 +58,7 @@ def _put(table: Any, obj: object) -> None:
 def _seed_batch(table: Any) -> None:
     _put(
         table,
-        Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1", pig_count=500),
+        Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1"),
     )
 
 

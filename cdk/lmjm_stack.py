@@ -390,6 +390,16 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_module)
 
+        put_module = _lambda.Function(
+            self,
+            "PutModuleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.put_module.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_module)
+
         # --- Pig Batch Lambdas ---
 
         get_batches = _lambda.Function(
@@ -421,6 +431,16 @@ class LmjmStack(Stack):
             environment={"TABLE_NAME": table.table_name},
         )
         table.grant_read_write_data(post_batch)
+
+        put_batch = _lambda.Function(
+            self,
+            "PutBatchLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            handler="lmjm.put_batch.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_batch)
 
         # --- Pig Feed Lambdas ---
 
@@ -615,6 +635,7 @@ class LmjmStack(Stack):
         # /pigs/modules/{module_id}
         module_resource = modules_resource.add_resource("{module_id}")
         add_cognito_method(module_resource, "GET", apigw.LambdaIntegration(get_module))
+        add_cognito_method(module_resource, "PUT", apigw.LambdaIntegration(put_module))
 
         # /pigs/batches
         batches_resource = pigs_resource.add_resource("batches")
@@ -624,6 +645,7 @@ class LmjmStack(Stack):
         # /pigs/batches/{batch_id}
         batch_resource = batches_resource.add_resource("{batch_id}")
         add_cognito_method(batch_resource, "GET", apigw.LambdaIntegration(get_batch))
+        add_cognito_method(batch_resource, "PUT", apigw.LambdaIntegration(put_batch))
 
         # /pigs/batches/{batch_id}/feed-truck-arrivals
         feed_truck_arrivals_resource = batch_resource.add_resource("feed-truck-arrivals")

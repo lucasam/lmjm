@@ -86,9 +86,9 @@ def _seed_modules(table: Any) -> None:
 
 
 def _seed_batches(table: Any) -> None:
-    _put(table, Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1", pig_count=500))
+    _put(table, Batch(pk="batch-1", sk="Batch", status="created", supply_id=100, module_id="MODULE#1"))
     _put(
-        table, Batch(pk="batch-2", sk="Batch", status="in_progress", supply_id=200, module_id="MODULE#2", pig_count=300)
+        table, Batch(pk="batch-2", sk="Batch", status="in_progress", supply_id=200, module_id="MODULE#2")
     )
 
 
@@ -101,7 +101,6 @@ def _seed_batch_with_start_summary(table: Any) -> None:
             status="in_progress",
             supply_id=300,
             module_id="MODULE#1",
-            pig_count=400,
             total_animal_count=250,
             average_start_date="2025-02-05",
             distinct_origin_count=2,

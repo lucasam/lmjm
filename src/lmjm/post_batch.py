@@ -24,7 +24,6 @@ batch_repo = BatchRepo(table)
 class PostBatchRequest:
     supply_id: int
     module_id: str
-    pig_count: int
     receive_date: str
     min_feed_stock_threshold: int
     expected_slaughter_date: Optional[str] = None
@@ -66,7 +65,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         module_id=request.module_id,
         receive_date=receive_date,
         expected_slaughter_date=expected_slaughter_date,
-        pig_count=request.pig_count,
         min_feed_stock_threshold=request.min_feed_stock_threshold,
     )
     batch_repo.update(batch)

@@ -31,7 +31,6 @@ export interface PostDiagnosticRequest {
 export interface CreateBatchRequest {
   supply_id: number;
   module_id: string;
-  pig_count: number;
   receive_date: string;
   min_feed_stock_threshold: number;
 }
@@ -51,6 +50,11 @@ export interface PostPigTruckArrivalRequest {
   pig_age_days: number;
   origin_name: string;
   origin_type: 'UPL' | 'Creche';
+  fiscal_document_number?: string;
+  animal_weight?: number;
+  gta_number?: string;
+  mossa?: string;
+  suplier_code?: number;
 }
 
 export interface PostMortalityRequest {
@@ -219,6 +223,17 @@ export function getModule(moduleId: string): Promise<Module> {
   return get<Module>(`/pigs/modules/${encodeURIComponent(moduleId)}`);
 }
 
+export interface UpdateModuleRequest {
+  name?: string;
+  area?: number;
+  supported_animal_count?: number;
+  silo_capacity?: number;
+}
+
+export function updateModule(moduleId: string, data: UpdateModuleRequest): Promise<void> {
+  return put(`/pigs/modules/${encodeURIComponent(moduleId)}`, data);
+}
+
 // --- Pig Batches ---
 
 export function listBatches(): Promise<Batch[]> {
@@ -227,6 +242,19 @@ export function listBatches(): Promise<Batch[]> {
 
 export function getBatch(batchId: string): Promise<Batch> {
   return get<Batch>(`/pigs/batches/${encodeURIComponent(batchId)}`);
+}
+
+export interface UpdateBatchRequest {
+  status?: string;
+  supply_id?: number;
+  module_id?: string;
+  receive_date?: string;
+  expected_slaughter_date?: string;
+  min_feed_stock_threshold?: number;
+}
+
+export function updateBatch(batchId: string, data: UpdateBatchRequest): Promise<void> {
+  return put(`/pigs/batches/${encodeURIComponent(batchId)}`, data);
 }
 
 export function createBatch(data: CreateBatchRequest): Promise<void> {

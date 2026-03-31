@@ -3,7 +3,7 @@ import json
 import os
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import unquote
 
 import boto3
@@ -29,6 +29,11 @@ class PostPigTruckArrivalRequest:
     pig_age_days: int
     origin_name: str
     origin_type: str
+    fiscal_document_number: str = ""
+    animal_weight: int = 0
+    gta_number: str = ""
+    mossa: str = ""
+    suplier_code: Optional[int] = None
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -79,6 +84,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pig_age_days=request.pig_age_days,
         origin_name=request.origin_name,
         origin_type=request.origin_type,
+        fiscal_document_number=request.fiscal_document_number,
+        animal_weight=request.animal_weight,
+        gta_number=request.gta_number,
+        mossa=request.mossa,
+        suplier_code=request.suplier_code,
     )
     pig_truck_arrival_repo.put(arrival)
 

@@ -93,7 +93,6 @@ def _seed_batch(table: Any) -> None:
             status="created",
             supply_id=100,
             module_id="MODULE#1",
-            pig_count=500,
             receive_date="2025-01-01",
         ),
     )
@@ -131,7 +130,6 @@ def test_post_batch_returns_201_on_success() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#1",
-                "pig_count": 500,
                 "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
             }
@@ -160,7 +158,6 @@ def test_post_batch_returns_404_for_missing_module() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#99",
-                "pig_count": 500,
                 "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
             }
