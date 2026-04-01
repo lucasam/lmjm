@@ -1,6 +1,6 @@
 {
   "cognitoDomain": "https://lmjm.auth.sa-east-1.amazoncognito.com",
   "cognitoClientId": "4tuh7p8vukor1kmgda45jpu8ti",
-  "redirectUri": "https://d8m719r1ttm6l.cloudfront.net/callback",
+  "redirectUri": "https://app.lmjm.net/callback",
   "apiUrl": "https://9rntxhz8m0.execute-api.sa-east-1.amazonaws.com/prod/"
 }

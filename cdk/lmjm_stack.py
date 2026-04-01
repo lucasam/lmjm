@@ -10,11 +10,14 @@ from aws_cdk import (
     Stack,
 )
 from aws_cdk import aws_apigateway as apigw
+from aws_cdk import aws_certificatemanager as acm
 from aws_cdk import aws_cloudfront as cloudfront
 from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_cognito as cognito
 from aws_cdk import aws_dynamodb as dynamodb
 from aws_cdk import aws_lambda as _lambda
+from aws_cdk import aws_route53 as route53
+from aws_cdk import aws_route53_targets as targets
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_s3_deployment as s3deploy
 from aws_cdk import aws_ssm as ssm
@@ -97,6 +100,25 @@ class LmjmStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
+        # Custom domain: app.lmjm.net
+        custom_domain = "app.lmjm.net"
+
+        hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
+            self,
+            "LmjmHostedZone",
+            hosted_zone_id="Z07927451E0NMAX1HPNFR",
+            zone_name="lmjm.net",
+        )
+
+        # ACM certificate must be in us-east-1 for CloudFront
+        certificate = acm.DnsValidatedCertificate(
+            self,
+            "AppCertificate",
+            domain_name=custom_domain,
+            hosted_zone=hosted_zone,
+            region="us-east-1",
+        )
+
         distribution = cloudfront.Distribution(
             self,
             "FrontendDistribution",
@@ -104,6 +126,8 @@ class LmjmStack(Stack):
                 origin=origins.S3BucketOrigin.with_origin_access_control(frontend_bucket),
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             ),
+            domain_names=[custom_domain],
+            certificate=certificate,
             default_root_object="index.html",
             error_responses=[
                 cloudfront.ErrorResponse(
@@ -119,6 +143,15 @@ class LmjmStack(Stack):
                     ttl=Duration.seconds(0),
                 ),
             ],
+        )
+
+        # DNS A record pointing app.lmjm.net → CloudFront
+        route53.ARecord(
+            self,
+            "AppAliasRecord",
+            zone=hosted_zone,
+            record_name="app",
+            target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(distribution)),
         )
 
         s3deploy.BucketDeployment(
@@ -188,8 +221,8 @@ class LmjmStack(Stack):
                     cognito.OAuthScope.EMAIL,
                     cognito.OAuthScope.PROFILE,
                 ],
-                callback_urls=[f"https://{distribution.distribution_domain_name}/callback"],
-                logout_urls=[f"https://{distribution.distribution_domain_name}"],
+                callback_urls=[f"https://{custom_domain}/callback"],
+                logout_urls=[f"https://{custom_domain}"],
             ),
             supported_identity_providers=[
                 cognito.UserPoolClientIdentityProvider.GOOGLE,
@@ -251,7 +284,7 @@ class LmjmStack(Stack):
 
         # --- API Gateway REST API with Cognito Authorizer ---
 
-        cloudfront_origin = f"https://{distribution.distribution_domain_name}"
+        cloudfront_origin = f"https://{custom_domain}"
 
         api = apigw.RestApi(
             self,
@@ -701,7 +734,7 @@ class LmjmStack(Stack):
         # --- Runtime config.json for frontend (Cognito + API values resolved at deploy time) ---
 
         cognito_hosted_ui_url = f"https://{user_pool_domain.domain_name}.auth.{self.region}.amazoncognito.com"
-        cloudfront_url = f"https://{distribution.distribution_domain_name}"
+        cloudfront_url = f"https://{custom_domain}"
 
         s3deploy.BucketDeployment(
             self,

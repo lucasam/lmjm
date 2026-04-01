@@ -41,7 +41,12 @@ export default function PigDashboard() {
     return map[status] ?? status;
   };
 
+  // Build module_id → name lookup from already-fetched modules
+  const moduleNameMap = new Map<string, string>();
+  (modules ?? []).forEach((m) => moduleNameMap.set(m.pk, m.name));
+
   const batchCols: Column<Batch>[] = [
+    { header: t('pigs.moduleName'), accessor: (r) => moduleNameMap.get(r.module_id) ?? r.module_id },
     { header: t('pigs.status'), accessor: (r) => statusLabel(r.status) },
     { header: t('pigs.supplyId'), accessor: (r) => String(r.supply_id) },
     { header: t('pigs.totalAnimalCount'), accessor: (r) => r.total_animal_count != null ? String(r.total_animal_count) : '—' },

@@ -1,0 +1,254 @@
+[
+  {
+    "receive_date": "2026-04-04",
+    "status": "created",
+    "supply_id": 112846734,
+    "sk": "Batch",
+    "min_feed_stock_threshold": 20000,
+    "module_id": "MODULE#1",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb"
+  },
+  {
+    "sk": "FeedBalance|20260404",
+    "balance_kg": 44000,
+    "measurement_date": "2026-04-04",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb"
+  },
+  {
+    "sk": "FeedConsumptionPlan|1",
+    "date": "2026-04-05",
+    "expected_grams_per_animal": 1020,
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "day_number": 1
+  },
+  {
+    "sk": "FeedConsumptionPlan|2",
+    "date": "2026-04-06",
+    "expected_grams_per_animal": 1030,
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "day_number": 2
+  },
+  {
+    "sk": "FeedConsumptionPlan|3",
+    "date": "2026-04-07",
+    "expected_grams_per_animal": 1040,
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "day_number": 3
+  },
+  {
+    "sk": "FeedConsumptionPlan|4",
+    "date": "2026-04-08",
+    "expected_grams_per_animal": 1050,
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "day_number": 4
+  },
+  {
+    "sk": "FeedConsumptionPlan|5",
+    "date": "2026-04-09",
+    "expected_grams_per_animal": 1060,
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "day_number": 5
+  },
+  {
+    "sk": "FeedSchedule|03485737-00d8-46f8-bdb8-7f57698c031b",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-06"
+  },
+  {
+    "sk": "FeedSchedule|2f2a7982-880c-4348-9db8-30353c656aed",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-08"
+  },
+  {
+    "sk": "FeedSchedule|3559267a-ff3c-4ef3-a5f9-9cf3c31aa3de",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-04-24"
+  },
+  {
+    "sk": "FeedSchedule|3ab70cfe-8652-49d3-958f-d2d904ea459d",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-01"
+  },
+  {
+    "sk": "FeedSchedule|66caefdd-b098-473e-92c5-12043da718fd",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-14"
+  },
+  {
+    "sk": "FeedSchedule|7354dc2a-89a9-40ad-849d-185cd91f055c",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-04"
+  },
+  {
+    "sk": "FeedSchedule|8f1bea54-3ce1-43f0-86b4-0c51119e86fa",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-04-27"
+  },
+  {
+    "sk": "FeedSchedule|9d6d509d-3f87-4c60-9618-a6bf3295e6a2",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-02"
+  },
+  {
+    "sk": "FeedSchedule|ab057f1b-a84d-4824-bca4-eefbda3ef8d8",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-17"
+  },
+  {
+    "sk": "FeedSchedule|af09fa68-42a8-464a-a3d6-2bfcd6ba6604",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-08"
+  },
+  {
+    "sk": "FeedSchedule|b86a9281-8f0f-4b45-9ce1-90d38ad25125",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-01"
+  },
+  {
+    "sk": "FeedSchedule|ba5c8915-0373-4f41-b884-39c05f56ca6a",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-08"
+  },
+  {
+    "sk": "FeedSchedule|be160c36-f710-45c1-adb9-0630ba099873",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-04-29"
+  },
+  {
+    "sk": "FeedSchedule|c5f9418e-8624-45aa-a532-8a5b21d00e02",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST02",
+    "planned_date": "2026-05-06"
+  },
+  {
+    "sk": "FeedSchedule|ccfcbfde-dc37-49ff-862c-a8a39b62545c",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-11"
+  },
+  {
+    "sk": "FeedSchedule|eb6dd3b0-59ab-48eb-a9e7-887ce05b9608",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "expected_amount_kg": 16000,
+    "feed_type": "ST01",
+    "planned_date": "2026-04-19"
+  },
+  {
+    "actual_amount_kg": 16390,
+    "sk": "FeedTruckArrival|20260318|7b144b3c-a669-4dd2-84b5-c24bf6d64ffb",
+    "fiscal_document_number": "832211",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "feed_type": "ST06",
+    "receive_date": "2026-03-18"
+  },
+  {
+    "actual_amount_kg": 15830,
+    "sk": "FeedTruckArrival|20260320|19956dcf-2395-46cd-9954-eddc403c9267",
+    "fiscal_document_number": "832638",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "feed_type": "ST06",
+    "receive_date": "2026-03-20"
+  },
+  {
+    "actual_amount_kg": 11780,
+    "sk": "FeedTruckArrival|20260320|59f63d3d-361d-487d-bce8-c4656ab5a4db",
+    "fiscal_document_number": "832798",
+    "pk": "293de398-0cca-4613-b528-7af1010c64eb",
+    "feed_type": "ST06",
+    "receive_date": "2026-03-20"
+  },
+  {
+    "area": 4000,
+    "module_number": 1,
+    "sk": "Module",
+    "supported_animal_count": 4800,
+    "silo_capacity": 80000,
+    "pk": "MODULE#1",
+    "name": "M\u00f3dulo 1"
+  },
+  {
+    "pk": "EMAIL_ALLOWLIST",
+    "sk": "isaiaslimaalvis@gmail.com"
+  },
+  {
+    "pk": "EMAIL_ALLOWLIST",
+    "sk": "liaalvesisaias687@gmail.com"
+  },
+  {
+    "pk": "EMAIL_ALLOWLIST",
+    "sk": "lucasam@gmail.com"
+  },
+  {
+    "area": 3000,
+    "module_number": 2,
+    "sk": "Module",
+    "supported_animal_count": 3800,
+    "silo_capacity": 80000,
+    "pk": "MODULE#2",
+    "name": "M\u00f3dulo 2"
+  },
+  {
+    "receive_date": "2025-11-26",
+    "status": "in_progress",
+    "pig_count": 3521,
+    "average_start_date": "2026-05-28",
+    "distinct_origin_count": 1,
+    "origin_types": [
+      "UPL"
+    ],
+    "supply_id": 112053764,
+    "sk": "Batch",
+    "min_feed_stock_threshold": 20000,
+    "module_id": "MODULE#2",
+    "pk": "d4b122a5-8783-4ef2-8f35-4add34fa50e5",
+    "total_animal_count": 980
+  },
+  {
+    "sex": "Male",
+    "pig_age_days": 70,
+    "origin_name": "Agropecuaria Santa Lucia",
+    "arrival_date": "2025-11-26",
+    "sk": "PigTruckArrival|20251126|de66467c-d6f6-48c9-bb06-0041915a8d62",
+    "pk": "d4b122a5-8783-4ef2-8f35-4add34fa50e5",
+    "origin_type": "UPL",
+    "animal_count": 355
+  },
+  {
+    "sex": "Male",
+    "pig_age_days": 70,
+    "origin_name": "Agropecuaria Santa Lucia",
+    "arrival_date": "2026-11-26",
+    "sk": "PigTruckArrival|20261126|bb0eaaa4-b577-4b1c-ad3a-8fa670d46acb",
+    "pk": "d4b122a5-8783-4ef2-8f35-4add34fa50e5",
+    "origin_type": "UPL",
+    "animal_count": 625
+  }
+]
