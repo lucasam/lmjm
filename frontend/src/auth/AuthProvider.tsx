@@ -87,6 +87,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
+  // Proactive token refresh every 50 minutes (tokens expire at 60 min)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const interval = setInterval(async () => {
+      const idToken = getStoredIdToken();
+      if (idToken && isTokenExpired(idToken)) {
+        const newToken = await cognitoRefreshToken();
+        if (newToken) {
+          const freshIdToken = getStoredIdToken();
+          if (freshIdToken) {
+            const parsed = parseUserFromIdToken(freshIdToken);
+            if (parsed) setUser(parsed);
+          }
+        }
+      }
+    }, 50 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   const login = useCallback(() => {
     cognitoLogin();
   }, []);

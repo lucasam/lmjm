@@ -34,7 +34,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if not isinstance(entries, list):
         return respond(status_code=400, error="Body must be a JSON array")
 
-    # Validate each entry
+    # Filter: only keep entries with a positive expected_grams_per_animal
+    valid_entries: list[dict[str, Any]] = []
     for entry in entries:
         day_number = entry.get("day_number")
         expected_grams = entry.get("expected_grams_per_animal")
@@ -45,21 +46,27 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 error=f"day_number must be an integer between 1 and 130, got {day_number}",
             )
 
+        # Skip entries with no value — they just won't be recorded
+        if expected_grams is None or expected_grams == "" or expected_grams == 0:
+            continue
+
         if not isinstance(expected_grams, (int, float)) or expected_grams <= 0:
             return respond(
                 status_code=400,
                 error=f"expected_grams_per_animal must be a positive number, got {expected_grams}",
             )
 
+        valid_entries.append(entry)
+
     # Delete all existing feed consumption plan entries for this batch
     feed_consumption_plan_repo.delete_all(batch_id)
 
-    # Compute date from batch receive_date + day_number
+    # Compute date from batch receive_date + day_number (day 1 = receive_date + 1 day)
     receive_date = datetime.strptime(batch.receive_date, "%Y-%m-%d")
 
     # Create new FeedConsumptionPlan records
     new_plans: list[FeedConsumptionPlan] = []
-    for entry_dict in entries:
+    for entry_dict in valid_entries:
         day_number = entry_dict["day_number"]
         plan_date = receive_date + timedelta(days=day_number)
         plan = FeedConsumptionPlan(

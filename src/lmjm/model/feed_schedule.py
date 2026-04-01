@@ -12,4 +12,5 @@ class FeedSchedule:
     feed_type: str = ""
     planned_date: str = ""
     expected_amount_kg: int = 0
+    status: str = "scheduled"
     fulfilled_by: Optional[str] = None

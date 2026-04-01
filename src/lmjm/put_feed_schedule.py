@@ -28,20 +28,36 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     entries: list[dict[str, Any]] = json.loads(event["body"])
 
-    # Delete all existing feed schedule entries for this batch
-    feed_schedule_repo.delete_all(batch_id)
-
-    # Create new FeedSchedule records
-    new_schedules: list[FeedSchedule] = []
+    # Build set of incoming sks to know which existing ones to keep
+    incoming_sks: set[str] = set()
     for entry_dict in entries:
+        sk = entry_dict.get("sk", "")
+        if sk:
+            incoming_sks.add(sk)
+
+    # Delete existing entries not present in the incoming list
+    existing = feed_schedule_repo.list(batch_id)
+    for ex in existing:
+        if ex.sk not in incoming_sks:
+            feed_schedule_repo.delete(batch_id, ex.sk)
+
+    # Upsert: update existing entries, create new ones
+    result: list[FeedSchedule] = []
+    for entry_dict in entries:
+        sk = entry_dict.get("sk", "")
+        if not sk:
+            sk = f"FeedSchedule|{uuid.uuid4()}"
+
         schedule = FeedSchedule(
             pk=batch_id,
-            sk=f"FeedSchedule|{uuid.uuid4()}",
+            sk=sk,
             feed_type=entry_dict.get("feed_type", ""),
             planned_date=entry_dict.get("planned_date", ""),
             expected_amount_kg=int(entry_dict.get("expected_amount_kg", 0)),
+            status=entry_dict.get("status", "scheduled"),
+            fulfilled_by=entry_dict.get("fulfilled_by"),
         )
         feed_schedule_repo.put(schedule)
-        new_schedules.append(schedule)
+        result.append(schedule)
 
-    return respond(body=serialize_to_dict_list(new_schedules))
+    return respond(body=serialize_to_dict_list(result))

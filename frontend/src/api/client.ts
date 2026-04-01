@@ -83,6 +83,7 @@ export interface PostFeedBalanceRequest {
 }
 
 import { getConfig } from '../config';
+import { isTokenExpired } from '../auth/cognito';
 
 function getBaseUrl(): string {
   return getConfig().apiUrl.replace(/\/+$/, '');
@@ -132,7 +133,19 @@ function clearTokensAndRedirect(): never {
 }
 
 async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem('lmjm_id_token');
+  let token = localStorage.getItem('lmjm_id_token');
+
+  // Proactively refresh if token is expired or about to expire
+  if (!token || isTokenExpired(token)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      token = localStorage.getItem('lmjm_id_token');
+    }
+    if (!token || isTokenExpired(token)) {
+      clearTokensAndRedirect();
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
@@ -143,13 +156,17 @@ async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<R
 
   let response = await fetch(`${getBaseUrl()}${path}`, { ...options, headers });
 
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     const newToken = await refreshAccessToken();
     if (newToken) {
-      headers['Authorization'] = `Bearer ${newToken}`;
+      // After refresh, both id_token and access_token are updated in localStorage
+      const freshIdToken = localStorage.getItem('lmjm_id_token');
+      if (freshIdToken) {
+        headers['Authorization'] = `Bearer ${freshIdToken}`;
+      }
       response = await fetch(`${getBaseUrl()}${path}`, { ...options, headers });
     }
-    if (!newToken || response.status === 401) {
+    if (!newToken || response.status === 401 || response.status === 403) {
       clearTokensAndRedirect();
     }
   }
@@ -247,10 +264,13 @@ export function getBatch(batchId: string): Promise<Batch> {
 export interface UpdateBatchRequest {
   status?: string;
   supply_id?: number;
-  module_id?: string;
   receive_date?: string;
   expected_slaughter_date?: string;
   min_feed_stock_threshold?: number;
+  total_animal_count?: number;
+  average_start_date?: string;
+  distinct_origin_count?: number;
+  origin_types?: string[];
 }
 
 export function updateBatch(batchId: string, data: UpdateBatchRequest): Promise<void> {

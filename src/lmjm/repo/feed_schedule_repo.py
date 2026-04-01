@@ -32,3 +32,6 @@ class FeedScheduleRepo:
         with self.table.batch_writer() as batch:
             for item in response["Items"]:
                 batch.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+
+    def delete(self, pk: str, sk: str) -> None:
+        self.table.delete_item(Key={"pk": pk, "sk": sk})

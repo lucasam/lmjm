@@ -4,9 +4,11 @@ import { updateFeedSchedule } from '../../api/client';
 import type { FeedSchedule } from '../../types/models';
 
 interface FeedScheduleEntry {
+  sk: string;
   feed_type: string;
   planned_date: string;
   expected_amount_kg: string;
+  status: string;
 }
 
 interface FeedScheduleFormProps {
@@ -18,17 +20,21 @@ interface FeedScheduleFormProps {
 
 function toEntry(s: FeedSchedule): FeedScheduleEntry {
   return {
+    sk: s.sk,
     feed_type: s.feed_type,
     planned_date: s.planned_date,
     expected_amount_kg: String(s.expected_amount_kg),
+    status: s.status ?? 'scheduled',
   };
 }
 
 export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess }: FeedScheduleFormProps) {
   const { t } = useTranslation();
-  const [entries, setEntries] = useState<FeedScheduleEntry[]>(
-    existing.length > 0 ? existing.map(toEntry) : [{ feed_type: '', planned_date: '', expected_amount_kg: '' }],
-  );
+  const [entries, setEntries] = useState<FeedScheduleEntry[]>(() => {
+    if (existing.length === 0) return [{ sk: '', feed_type: '', planned_date: '', expected_amount_kg: '', status: 'scheduled' }];
+    const sorted = [...existing].sort((a, b) => a.planned_date.localeCompare(b.planned_date));
+    return sorted.map(toEntry);
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -38,7 +44,7 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
   };
 
   const addEntry = () => {
-    setEntries((prev) => [...prev, { feed_type: '', planned_date: '', expected_amount_kg: '' }]);
+    setEntries((prev) => [...prev, { sk: '', feed_type: '', planned_date: '', expected_amount_kg: '', status: 'scheduled' }]);
   };
 
   const removeEntry = (idx: number) => {
@@ -52,10 +58,11 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
     try {
       const data = entries.map((entry) => ({
         pk: '',
-        sk: '',
+        sk: entry.sk || '',
         feed_type: entry.feed_type,
         planned_date: entry.planned_date,
         expected_amount_kg: Number(entry.expected_amount_kg),
+        status: entry.status as 'scheduled' | 'delivered' | 'canceled',
       }));
       await updateFeedSchedule(batchId, data);
       setSuccess(true);
@@ -77,7 +84,7 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
 
         <form onSubmit={handleSubmit}>
           {entries.map((entry, idx) => (
-            <div key={idx} style={entryRow}>
+            <div key={entry.sk || `new-${idx}`} style={entryRow}>
               <label style={inlineLabel}>
                 {t('pigs.feedType')}
                 <input type="text" required value={entry.feed_type} onChange={(e) => updateEntry(idx, 'feed_type', e.target.value)} style={inlineInput} />
@@ -89,6 +96,14 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
               <label style={inlineLabel}>
                 {t('pigs.expectedAmountKg')}
                 <input type="number" required min="0" step="any" value={entry.expected_amount_kg} onChange={(e) => updateEntry(idx, 'expected_amount_kg', e.target.value)} style={inlineInput} />
+              </label>
+              <label style={inlineLabel}>
+                {t('pigs.status')}
+                <select value={entry.status} onChange={(e) => updateEntry(idx, 'status', e.target.value)} style={inlineInput}>
+                  <option value="scheduled">{t('pigs.feedScheduleStatusScheduled', 'Agendado')}</option>
+                  <option value="delivered">{t('pigs.feedScheduleStatusDelivered', 'Entregue')}</option>
+                  <option value="canceled">{t('pigs.feedScheduleStatusCanceled', 'Cancelado')}</option>
+                </select>
               </label>
               <button type="button" style={removeBtn} onClick={() => removeEntry(idx)} aria-label={t('common.delete')}>✕</button>
             </div>
@@ -114,7 +129,7 @@ const overlayStyle: React.CSSProperties = {
 };
 const wideModalStyle: React.CSSProperties = {
   backgroundColor: '#fff', borderRadius: '8px', padding: '1.5rem',
-  width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto',
+  width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto',
 };
 const modalTitle: React.CSSProperties = { fontSize: '1.15rem', fontWeight: 600, marginBottom: '1rem' };
 const entryRow: React.CSSProperties = {

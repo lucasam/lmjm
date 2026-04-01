@@ -17,7 +17,8 @@
     "noData": "Nenhum dado encontrado",
     "yes": "Sim",
     "no": "Não",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "all": "Todos"
   },
   "species": {
     "title": "Selecione a Espécie",
@@ -161,7 +162,10 @@
     "noForecastData": "São necessários dados de balanço de ração e resumo inicial para gerar a previsão.",
     "projectedBalance": "Saldo Projetado (kg)",
     "overCapacity": "Acima da capacidade do silo",
-    "belowThreshold": "Abaixo do estoque mínimo"
+    "belowThreshold": "Abaixo do estoque mínimo",
+    "feedScheduleStatusScheduled": "Agendado",
+    "feedScheduleStatusDelivered": "Entregue",
+    "feedScheduleStatusCanceled": "Cancelado"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",

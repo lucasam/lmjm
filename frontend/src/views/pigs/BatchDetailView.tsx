@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
@@ -57,6 +57,7 @@ export default function BatchDetailView() {
   const [modal, setModal] = useState<ModalType>(null);
   const [triggeringStart, setTriggeringStart] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [scheduleFilter, setScheduleFilter] = useState<string>('all');
 
   const id = batchId ?? '';
 
@@ -109,11 +110,27 @@ export default function BatchDetailView() {
     return map[status] ?? status;
   };
 
+  const translateScheduleStatus = (s: string): string => {
+    const map: Record<string, string> = {
+      scheduled: t('pigs.feedScheduleStatusScheduled', 'Agendado'),
+      delivered: t('pigs.feedScheduleStatusDelivered', 'Entregue'),
+      canceled: t('pigs.feedScheduleStatusCanceled', 'Cancelado'),
+    };
+    return map[s] ?? s;
+  };
+
+  const sortedSchedule = useMemo(() => {
+    const all = schedule ?? [];
+    const sorted = [...all].sort((a, b) => a.planned_date.localeCompare(b.planned_date));
+    if (scheduleFilter === 'all') return sorted;
+    return sorted.filter((s) => s.status === scheduleFilter);
+  }, [schedule, scheduleFilter]);
+
   const scheduleCols: Column<FeedSchedule>[] = [
     { header: t('pigs.feedType'), accessor: (r) => r.feed_type },
     { header: t('pigs.plannedDate'), accessor: (r) => formatDate(r.planned_date) },
     { header: t('pigs.expectedAmountKg'), accessor: (r) => formatNumber(r.expected_amount_kg) },
-    { header: t('pigs.status'), accessor: (r) => r.fulfilled_by ? '✓' : '—' },
+    { header: t('pigs.status'), accessor: (r) => translateScheduleStatus(r.status ?? 'scheduled') },
   ];
 
   const feedTruckCols: Column<FeedTruckArrival>[] = [
@@ -232,7 +249,15 @@ export default function BatchDetailView() {
 
           {/* Feed schedule */}
           <h2 style={sectionTitle}>{t('pigs.feedSchedule')}</h2>
-          <DataTable columns={scheduleCols} data={schedule ?? []} keyExtractor={(r) => r.sk} />
+          <div style={filterBar}>
+            <select value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)} style={filterSelect}>
+              <option value="all">{t('common.all', 'Todos')}</option>
+              <option value="scheduled">{t('pigs.feedScheduleStatusScheduled', 'Agendado')}</option>
+              <option value="delivered">{t('pigs.feedScheduleStatusDelivered', 'Entregue')}</option>
+              <option value="canceled">{t('pigs.feedScheduleStatusCanceled', 'Cancelado')}</option>
+            </select>
+          </div>
+          <DataTable columns={scheduleCols} data={sortedSchedule} keyExtractor={(r) => r.sk} />
 
           {/* Feed truck arrivals */}
           <h2 style={sectionTitle}>{t('pigs.feedTruckArrivals')}</h2>
@@ -325,21 +350,29 @@ const linkBtn: React.CSSProperties = {
   cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
 };
 const inlineError: React.CSSProperties = { color: '#721c24', fontSize: '0.85rem', alignSelf: 'center' };
+const filterBar: React.CSSProperties = { marginBottom: '0.75rem' };
+const filterSelect: React.CSSProperties = {
+  padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px',
+  fontSize: '0.9rem', minHeight: '44px', minWidth: '160px',
+};
 
 
 function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
   batchId: string;
-  initial: { status: string; supply_id: number; module_id: string; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number };
+  initial: { status: string; supply_id: number; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number; total_animal_count?: number; average_start_date?: string; distinct_origin_count?: number; origin_types?: string[] };
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState(initial.status);
   const [supplyId, setSupplyId] = useState(String(initial.supply_id));
-  const [moduleId, setModuleId] = useState(initial.module_id);
   const [receiveDate, setReceiveDate] = useState(initial.receive_date);
   const [expectedSlaughterDate, setExpectedSlaughterDate] = useState(initial.expected_slaughter_date ?? '');
   const [minFeedStockThreshold, setMinFeedStockThreshold] = useState(String(initial.min_feed_stock_threshold));
+  const [totalAnimalCount, setTotalAnimalCount] = useState(initial.total_animal_count != null ? String(initial.total_animal_count) : '');
+  const [averageStartDate, setAverageStartDate] = useState(initial.average_start_date ?? '');
+  const [distinctOriginCount, setDistinctOriginCount] = useState(initial.distinct_origin_count != null ? String(initial.distinct_origin_count) : '');
+  const [originTypes, setOriginTypes] = useState(initial.origin_types?.join(', ') ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -352,10 +385,13 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
       await updateBatch(batchId, {
         status,
         supply_id: Number(supplyId),
-        module_id: moduleId,
         receive_date: receiveDate.replace(/-/g, ''),
         ...(expectedSlaughterDate ? { expected_slaughter_date: expectedSlaughterDate.replace(/-/g, '') } : {}),
         min_feed_stock_threshold: Number(minFeedStockThreshold),
+        ...(totalAnimalCount ? { total_animal_count: Number(totalAnimalCount) } : {}),
+        ...(averageStartDate ? { average_start_date: averageStartDate.replace(/-/g, '') } : {}),
+        ...(distinctOriginCount ? { distinct_origin_count: Number(distinctOriginCount) } : {}),
+        ...(originTypes.trim() ? { origin_types: originTypes.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
       });
       setSuccess(true);
       setTimeout(onSuccess, 600);
@@ -386,10 +422,6 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
             <input type="number" min="0" step="1" value={supplyId} onChange={(e) => setSupplyId(e.target.value)} style={editInput} />
           </label>
           <label style={editLabel}>
-            {t('pigs.modules')}
-            <input type="text" value={moduleId} onChange={(e) => setModuleId(e.target.value)} style={editInput} />
-          </label>
-          <label style={editLabel}>
             {t('pigs.receiveDate')}
             <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} style={editInput} />
           </label>
@@ -400,6 +432,22 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
           <label style={editLabel}>
             {t('pigs.minFeedStockThreshold')}
             <input type="number" min="0" step="1" value={minFeedStockThreshold} onChange={(e) => setMinFeedStockThreshold(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.totalAnimalCount')}
+            <input type="number" min="0" step="1" value={totalAnimalCount} onChange={(e) => setTotalAnimalCount(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.averageStartDate')}
+            <input type="date" value={averageStartDate} onChange={(e) => setAverageStartDate(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.distinctOriginCount')}
+            <input type="number" min="0" step="1" value={distinctOriginCount} onChange={(e) => setDistinctOriginCount(e.target.value)} style={editInput} />
+          </label>
+          <label style={editLabel}>
+            {t('pigs.originTypes')}
+            <input type="text" value={originTypes} onChange={(e) => setOriginTypes(e.target.value)} style={editInput} placeholder="UPL, Creche" />
           </label>
           <div style={editBtnRow}>
             <button type="button" style={editCancelBtn} onClick={onClose}>{t('common.cancel')}</button>

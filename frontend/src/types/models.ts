@@ -61,6 +61,7 @@ export interface FeedSchedule {
   feed_type: string;
   planned_date: string;
   expected_amount_kg: number;
+  status: 'scheduled' | 'delivered' | 'canceled';
   fulfilled_by?: string;
 }
 

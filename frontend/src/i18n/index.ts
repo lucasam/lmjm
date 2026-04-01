@@ -24,9 +24,16 @@ i18n
   });
 
 /**
- * Format a Date or ISO string to DD/MM/YYYY (pt-BR convention).
+ * Format a Date or ISO date string to DD/MM/YYYY (pt-BR convention).
+ * For date-only strings (YYYY-MM-DD), parses manually to avoid timezone shift.
  */
 export function formatDate(value: Date | string): string {
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+  }
   const date = typeof value === 'string' ? new Date(value) : value;
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',

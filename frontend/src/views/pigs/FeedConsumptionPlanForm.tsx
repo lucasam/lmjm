@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { putFeedConsumptionPlan } from '../../api/client';
+import { formatDate } from '../../i18n';
 import type { FeedConsumptionPlanEntry } from '../../types/models';
 
 interface FeedConsumptionPlanFormProps {
@@ -11,25 +12,31 @@ interface FeedConsumptionPlanFormProps {
   onSuccess: () => void;
 }
 
+/** Add days to a YYYY-MM-DD string without timezone issues. */
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const ny = date.getFullYear();
+  const nm = String(date.getMonth() + 1).padStart(2, '0');
+  const nd = String(date.getDate()).padStart(2, '0');
+  return `${ny}-${nm}-${nd}`;
 }
 
 export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing, onClose, onSuccess }: FeedConsumptionPlanFormProps) {
   const { t } = useTranslation();
 
+  // Hydrate from existing data sorted by day_number
   const existingMap = useMemo(() => {
     const m = new Map<number, number>();
-    existing.forEach((e) => m.set(e.day_number, e.expected_grams_per_animal));
+    const sorted = [...existing].sort((a, b) => a.day_number - b.day_number);
+    sorted.forEach((e) => m.set(e.day_number, e.expected_grams_per_animal));
     return m;
   }, [existing]);
 
   const [values, setValues] = useState<string[]>(
     Array.from({ length: 130 }, (_, i) => {
       const v = existingMap.get(i + 1);
-      return v !== undefined ? String(v) : '';
+      return v !== undefined && v > 0 ? String(v) : '';
     }),
   );
   const [submitting, setSubmitting] = useState(false);
@@ -49,10 +56,11 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
     setSubmitting(true);
     setError(null);
     try {
+      // Send all 130 entries — backend will skip ones with no value
       const data: FeedConsumptionPlanEntry[] = values.map((v, i) => ({
         day_number: i + 1,
-        expected_grams_per_animal: Number(v) || 0,
-        date: addDays(receiveDate, i),
+        expected_grams_per_animal: v ? Number(v) : 0,
+        date: addDays(receiveDate, i + 1),
       }));
       await putFeedConsumptionPlan(batchId, data);
       setSuccess(true);
@@ -86,15 +94,16 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
                 {values.map((val, i) => (
                   <tr key={i}>
                     <td style={tdStyle}>{i + 1}</td>
-                    <td style={tdStyle}>{addDays(receiveDate, i)}</td>
+                    <td style={tdStyle}>{formatDate(addDays(receiveDate, i + 1))}</td>
                     <td style={tdStyle}>
                       <input
                         type="number"
                         min="0"
-                        step="any"
+                        step="1"
                         value={val}
                         onChange={(e) => updateValue(i, e.target.value)}
                         style={cellInput}
+                        placeholder="—"
                       />
                     </td>
                   </tr>

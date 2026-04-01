@@ -22,10 +22,13 @@ batch_repo = BatchRepo(table)
 class PutBatchRequest:
     status: Optional[str] = None
     supply_id: Optional[int] = None
-    module_id: Optional[str] = None
     receive_date: Optional[str] = None
     expected_slaughter_date: Optional[str] = None
     min_feed_stock_threshold: Optional[int] = None
+    total_animal_count: Optional[int] = None
+    average_start_date: Optional[str] = None
+    distinct_origin_count: Optional[int] = None
+    origin_types: Optional[list[str]] = None
 
 
 def _parse_date(value: str) -> Optional[str]:
@@ -48,8 +51,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         batch.status = request.status
     if request.supply_id is not None:
         batch.supply_id = request.supply_id
-    if request.module_id is not None:
-        batch.module_id = request.module_id
     if request.receive_date is not None:
         parsed = _parse_date(request.receive_date)
         if not parsed:
@@ -62,6 +63,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         batch.expected_slaughter_date = parsed
     if request.min_feed_stock_threshold is not None:
         batch.min_feed_stock_threshold = request.min_feed_stock_threshold
+    if request.total_animal_count is not None:
+        batch.total_animal_count = request.total_animal_count
+    if request.average_start_date is not None:
+        parsed = _parse_date(request.average_start_date)
+        if not parsed:
+            return respond(status_code=400, error="average_start_date must be in YYYYMMDD format")
+        batch.average_start_date = parsed
+    if request.distinct_origin_count is not None:
+        batch.distinct_origin_count = request.distinct_origin_count
+    if request.origin_types is not None:
+        batch.origin_types = request.origin_types
 
     batch_repo.update(batch)
 
