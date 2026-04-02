@@ -70,7 +70,7 @@ export default function AnimalDetailView() {
       userEmail={user?.email}
       onLogout={logout}
     >
-      <h1 style={titleStyle}>{t('cattle.animalDetail')}</h1>
+      <h1 className="page-title">{t('cattle.animalDetail')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={() => { refetchAnimal(); refetchInsem(); refetchDiag(); }} />}
@@ -78,7 +78,7 @@ export default function AnimalDetailView() {
       {!loading && !error && animal && (
         <>
           {/* Animal fields */}
-          <div style={detailGrid}>
+          <div className="detail-grid">
             <DetailRow label={t('cattle.earTag')} value={animal.ear_tag} />
             <DetailRow label={t('cattle.breed')} value={animal.breed} />
             <DetailRow label={t('cattle.sex')} value={animal.sex} />
@@ -96,17 +96,17 @@ export default function AnimalDetailView() {
           </div>
 
           {/* Action buttons */}
-          <div style={actionBar}>
-            <button type="button" style={actionBtn} onClick={() => setShowInseminationForm(true)}>
+          <div className="action-bar">
+            <button type="button" className="btn btn-primary" onClick={() => setShowInseminationForm(true)}>
               {t('cattle.newInsemination')}
             </button>
-            <button type="button" style={actionBtn} onClick={() => setShowDiagnosticForm(true)}>
+            <button type="button" className="btn btn-primary" onClick={() => setShowDiagnosticForm(true)}>
               {t('cattle.newDiagnostic')}
             </button>
           </div>
 
           {/* Insemination history */}
-          <h2 style={sectionTitle}>{t('cattle.inseminations')}</h2>
+          <h2 className="section-title">{t('cattle.inseminations')}</h2>
           <DataTable
             columns={inseminationCols}
             data={inseminations ?? []}
@@ -114,7 +114,7 @@ export default function AnimalDetailView() {
           />
 
           {/* Diagnostic history */}
-          <h2 style={sectionTitle}>{t('cattle.diagnostics')}</h2>
+          <h2 className="section-title">{t('cattle.diagnostics')}</h2>
           <DataTable
             columns={diagnosticCols}
             data={diagnostics ?? []}
@@ -144,22 +144,9 @@ export default function AnimalDetailView() {
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
   return (
-    <div style={detailRow}>
-      <span style={detailLabel}>{label}</span>
-      <span style={detailValue}>{value ?? '—'}</span>
+    <div className="detail-row">
+      <span className="detail-label">{label}</span>
+      <span className="detail-value">{value ?? '—'}</span>
     </div>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const detailGrid: React.CSSProperties = { marginBottom: '1.5rem' };
-const detailRow: React.CSSProperties = { display: 'flex', padding: '0.4rem 0', borderBottom: '1px solid #eee', gap: '0.5rem' };
-const detailLabel: React.CSSProperties = { fontWeight: 600, minWidth: '140px', color: '#555' };
-const detailValue: React.CSSProperties = { color: '#222' };
-const actionBar: React.CSSProperties = { display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' };
-const actionBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const sectionTitle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: 600, margin: '1.5rem 0 0.75rem' };

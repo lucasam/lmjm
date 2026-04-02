@@ -6,53 +6,17 @@ export default function LoginView() {
   const { login } = useAuth();
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
-        <h1 style={titleStyle}>LMJM</h1>
-        <button type="button" style={loginBtnStyle} onClick={login}>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-logo-area">
+          <span className="login-emoji" role="img" aria-label="livestock">🌿</span>
+          <h1 className="login-title">LMJM</h1>
+          <p className="login-subtitle">Livestock Management</p>
+        </div>
+        <button type="button" className="login-btn" onClick={login}>
           {t('auth.loginWithGoogle')}
         </button>
       </div>
     </div>
   );
 }
-
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '100vh',
-  padding: '1rem',
-  backgroundColor: '#f5f5f5',
-};
-
-const cardStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: '2rem 1.5rem',
-  backgroundColor: '#fff',
-  borderRadius: '8px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  width: '100%',
-  maxWidth: '360px',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '1.75rem',
-  fontWeight: 700,
-  marginBottom: '2rem',
-  color: '#1976d2',
-};
-
-const loginBtnStyle: React.CSSProperties = {
-  minWidth: '44px',
-  minHeight: '44px',
-  padding: '12px 24px',
-  fontSize: '1rem',
-  fontWeight: 600,
-  color: '#fff',
-  backgroundColor: '#1976d2',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  width: '100%',
-};

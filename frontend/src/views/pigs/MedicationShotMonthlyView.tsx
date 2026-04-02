@@ -86,13 +86,13 @@ export default function MedicationShotMonthlyView() {
 
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
-      <h1 style={titleStyle}>{t('pigs.medicationShots')}</h1>
+      <h1 className="page-title">{t('pigs.medicationShots')}</h1>
 
       {/* Month selector */}
-      <div style={monthNav}>
-        <button type="button" style={navBtn} onClick={() => setMonth((m) => shiftMonth(m, -1))}>◀</button>
-        <span style={monthLabel}>{formatMonthLabel(month)}</span>
-        <button type="button" style={navBtn} onClick={() => setMonth((m) => shiftMonth(m, 1))}>▶</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+        <button type="button" className="btn btn-secondary" style={{ padding: '8px 14px' }} onClick={() => setMonth((m) => shiftMonth(m, -1))}>◀</button>
+        <span style={{ fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' }}>{formatMonthLabel(month)}</span>
+        <button type="button" className="btn btn-secondary" style={{ padding: '8px 14px' }} onClick={() => setMonth((m) => shiftMonth(m, 1))}>▶</button>
       </div>
 
       {loading && <LoadingSpinner />}
@@ -100,30 +100,30 @@ export default function MedicationShotMonthlyView() {
 
       {!loading && !error && (
         medications.length === 0 ? (
-          <div style={emptyStyle}>{t('common.noData')}</div>
+          <div className="table-empty">{t('common.noData')}</div>
         ) : (
-          <div style={tableWrapper}>
-            <table style={tableStyle}>
+          <div className="table-wrapper">
+            <table className="table">
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, position: 'sticky', left: 0, zIndex: 2, backgroundColor: '#f5f5f5' }}>
+                  <th style={{ position: 'sticky', left: 0, zIndex: 2 }}>
                     {t('pigs.medicationName')}
                   </th>
                   {dayNumbers.map((d) => (
-                    <th key={d} style={thStyle}>{d}</th>
+                    <th key={d} style={{ textAlign: 'center' }}>{d}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {medications.map((med) => (
                   <tr key={med}>
-                    <td style={{ ...tdStyle, position: 'sticky', left: 0, zIndex: 1, backgroundColor: '#fff', fontWeight: 600 }}>
+                    <td style={{ position: 'sticky', left: 0, zIndex: 1, backgroundColor: 'var(--surface)', fontWeight: 600 }}>
                       {med}
                     </td>
                     {dayNumbers.map((d) => {
                       const count = map[med]?.[d];
                       return (
-                        <td key={d} style={{ ...tdStyle, textAlign: 'center' }}>
+                        <td key={d} style={{ textAlign: 'center' }}>
                           {count != null ? count : ''}
                         </td>
                       );
@@ -136,33 +136,11 @@ export default function MedicationShotMonthlyView() {
         )
       )}
 
-      <div style={backBar}>
-        <button type="button" style={backBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
+      <div style={{ marginTop: '1.5rem' }}>
+        <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
           {t('common.back')}
         </button>
       </div>
     </Layout>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const monthNav: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' };
-const navBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', border: '1px solid #ccc', borderRadius: '6px',
-  background: '#fff', cursor: 'pointer', fontSize: '1rem',
-};
-const monthLabel: React.CSSProperties = { fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' };
-const tableWrapper: React.CSSProperties = { overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' };
-const tableStyle: React.CSSProperties = { borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '100%' };
-const thStyle: React.CSSProperties = {
-  padding: '0.5rem 0.4rem', borderBottom: '2px solid #ddd', whiteSpace: 'nowrap',
-  fontWeight: 600, backgroundColor: '#f5f5f5', textAlign: 'center',
-};
-const tdStyle: React.CSSProperties = { padding: '0.5rem 0.4rem', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' };
-const emptyStyle: React.CSSProperties = { padding: '2rem', textAlign: 'center', color: '#888' };
-const backBar: React.CSSProperties = { marginTop: '1.5rem' };
-const backBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#e3f2fd', color: '#1976d2', border: '1px solid #1976d2', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};

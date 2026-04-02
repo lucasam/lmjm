@@ -56,21 +56,17 @@ function computeForecast(
   const totalSiloCapacity = moduleData.silo_capacity;
   const minThreshold = batch.min_feed_stock_threshold;
 
-  // Latest balance
   const sortedBalances = [...balances].sort((a, b) => a.measurement_date.localeCompare(b.measurement_date));
   const latestBalance = sortedBalances[sortedBalances.length - 1];
 
-  // Fulfilled schedule IDs (from arrivals that reference a schedule)
   const fulfilledScheduleIds = new Set<string>();
   for (const a of arrivals) {
     if (a.feed_schedule_id) fulfilledScheduleIds.add(a.feed_schedule_id);
   }
-  // Also check fulfilled_by on schedule entries
   for (const s of schedule) {
     if (s.fulfilled_by) fulfilledScheduleIds.add(s.sk);
   }
 
-  // Unfulfilled schedule entries as delivery map by date
   const deliveryByDate: Record<string, number> = {};
   for (const s of schedule) {
     if (!fulfilledScheduleIds.has(s.sk)) {
@@ -78,7 +74,6 @@ function computeForecast(
     }
   }
 
-  // Plan lookup by day_number
   const planByDay: Record<number, number> = {};
   for (const p of plan) {
     planByDay[p.day_number] = p.expected_grams_per_animal;
@@ -88,7 +83,6 @@ function computeForecast(
   const startDate = new Date(latestBalance.measurement_date + 'T00:00:00');
   let balance = latestBalance.balance_kg;
 
-  // Forecast up to 60 days or end of 130-day plan
   const maxDays = 60;
   const rows: ForecastRow[] = [];
 
@@ -97,10 +91,8 @@ function computeForecast(
     const dateStr = currentDate.toISOString().substring(0, 10);
 
     if (d > 0) {
-      // Add scheduled deliveries for this day
       balance += deliveryByDate[dateStr] || 0;
 
-      // Subtract daily consumption
       const daysSinceReceive = Math.round((currentDate.getTime() - receiveDate.getTime()) / 86400000);
       const dayNumber = daysSinceReceive + 1;
       const gramsPerAnimal = planByDay[dayNumber] ?? 0;
@@ -170,28 +162,34 @@ export default function FeedBalanceForecastView() {
 
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
-      <h1 style={titleStyle}>{t('pigs.feedForecast')}</h1>
+      <h1 className="page-title">{t('pigs.feedForecast')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
 
       {!loading && !error && (
         forecastRows.length === 0 ? (
-          <div style={emptyStyle}>
+          <div className="table-empty">
             {t('pigs.noForecastData', 'São necessários dados de balanço de ração e resumo inicial para gerar a previsão.')}
           </div>
         ) : (
           <>
-            <div style={legendBar}>
-              <span style={legendItem}><span style={{ ...legendDot, backgroundColor: '#d32f2f' }} /> {t('pigs.overCapacity', 'Acima da capacidade do silo')}</span>
-              <span style={legendItem}><span style={{ ...legendDot, backgroundColor: '#e65100' }} /> {t('pigs.belowThreshold', 'Abaixo do estoque mínimo')}</span>
+            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--error)' }} />
+                {t('pigs.overCapacity', 'Acima da capacidade do silo')}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--accent)' }} />
+                {t('pigs.belowThreshold', 'Abaixo do estoque mínimo')}
+              </span>
             </div>
-            <div style={tableWrapper}>
-              <table style={tableStyle}>
+            <div className="table-wrapper">
+              <table className="table">
                 <thead>
                   <tr>
-                    <th style={thStyle}>{t('pigs.date')}</th>
-                    <th style={thStyle}>{t('pigs.projectedBalance', 'Saldo Projetado (kg)')}</th>
+                    <th>{t('pigs.date')}</th>
+                    <th>{t('pigs.projectedBalance', 'Saldo Projetado (kg)')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -202,11 +200,10 @@ export default function FeedBalanceForecastView() {
 
                     return (
                       <tr key={row.date} style={rowBg ? { backgroundColor: rowBg } : undefined}>
-                        <td style={tdStyle}>{formatDate(row.date)}</td>
+                        <td>{formatDate(row.date)}</td>
                         <td style={{
-                          ...tdStyle,
                           fontWeight: 600,
-                          color: row.overCapacity ? '#d32f2f' : row.belowThreshold ? '#e65100' : undefined,
+                          color: row.overCapacity ? 'var(--error)' : row.belowThreshold ? 'var(--accent)' : undefined,
                         }}>
                           {formatNumber(row.projectedBalance, 1)}
                           {row.overCapacity && ' ⚠'}
@@ -222,30 +219,11 @@ export default function FeedBalanceForecastView() {
         )
       )}
 
-      <div style={backBar}>
-        <button type="button" style={backBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
+      <div style={{ marginTop: '1.5rem' }}>
+        <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
           {t('common.back')}
         </button>
       </div>
     </Layout>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const legendBar: React.CSSProperties = { display: 'flex', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap', fontSize: '0.85rem' };
-const legendItem: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.4rem' };
-const legendDot: React.CSSProperties = { display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%' };
-const tableWrapper: React.CSSProperties = { overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' };
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', padding: '0.75rem 0.5rem', borderBottom: '2px solid #ddd',
-  whiteSpace: 'nowrap', fontWeight: 600, backgroundColor: '#f5f5f5',
-};
-const tdStyle: React.CSSProperties = { padding: '0.75rem 0.5rem', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' };
-const emptyStyle: React.CSSProperties = { padding: '2rem', textAlign: 'center', color: '#888' };
-const backBar: React.CSSProperties = { marginTop: '1.5rem' };
-const backBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#e3f2fd', color: '#1976d2', border: '1px solid #1976d2', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};

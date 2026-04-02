@@ -75,45 +75,45 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
   };
 
   return (
-    <div style={overlayStyle} onClick={onClose} role="presentation">
-      <div style={wideModalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={modalTitle}>{t('pigs.feedSchedule')}</h2>
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div className="modal-content" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-title">{t('pigs.feedSchedule')}</h2>
 
-        {success && <div style={successMsg}>✓ {t('common.save')}</div>}
-        {error && <div style={errorMsg}>{error}</div>}
+        {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           {entries.map((entry, idx) => (
             <div key={entry.sk || `new-${idx}`} style={entryRow}>
               <label style={inlineLabel}>
                 {t('pigs.feedType')}
-                <input type="text" required value={entry.feed_type} onChange={(e) => updateEntry(idx, 'feed_type', e.target.value)} style={inlineInput} />
+                <input type="text" required value={entry.feed_type} onChange={(e) => updateEntry(idx, 'feed_type', e.target.value)} className="form-input" />
               </label>
               <label style={inlineLabel}>
                 {t('pigs.plannedDate')}
-                <input type="date" required value={entry.planned_date} onChange={(e) => updateEntry(idx, 'planned_date', e.target.value)} style={inlineInput} />
+                <input type="date" required value={entry.planned_date} onChange={(e) => updateEntry(idx, 'planned_date', e.target.value)} className="form-input" />
               </label>
               <label style={inlineLabel}>
                 {t('pigs.expectedAmountKg')}
-                <input type="number" required min="0" step="any" value={entry.expected_amount_kg} onChange={(e) => updateEntry(idx, 'expected_amount_kg', e.target.value)} style={inlineInput} />
+                <input type="number" required min="0" step="any" value={entry.expected_amount_kg} onChange={(e) => updateEntry(idx, 'expected_amount_kg', e.target.value)} className="form-input" />
               </label>
               <label style={inlineLabel}>
                 {t('pigs.status')}
-                <select value={entry.status} onChange={(e) => updateEntry(idx, 'status', e.target.value)} style={inlineInput}>
+                <select value={entry.status} onChange={(e) => updateEntry(idx, 'status', e.target.value)} className="form-input">
                   <option value="scheduled">{t('pigs.feedScheduleStatusScheduled', 'Agendado')}</option>
                   <option value="delivered">{t('pigs.feedScheduleStatusDelivered', 'Entregue')}</option>
                   <option value="canceled">{t('pigs.feedScheduleStatusCanceled', 'Cancelado')}</option>
                 </select>
               </label>
-              <button type="button" style={removeBtn} onClick={() => removeEntry(idx)} aria-label={t('common.delete')}>✕</button>
+              <button type="button" className="btn btn-danger" style={{ alignSelf: 'flex-end', padding: '8px 12px' }} onClick={() => removeEntry(idx)} aria-label={t('common.delete')}>✕</button>
             </div>
           ))}
 
-          <button type="button" style={addBtn} onClick={addEntry}>+ {t('common.create')}</button>
+          <button type="button" className="btn btn-outline" style={{ marginBottom: '1rem' }} onClick={addEntry}>+ {t('common.create')}</button>
 
-          <div style={btnRow}>
-            <button type="button" style={cancelBtn} onClick={onClose}>{t('common.cancel')}</button>
-            <button type="submit" style={submitBtn} disabled={submitting}>
+          <div className="modal-btn-row">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting ? t('common.loading') : t('common.submit')}
             </button>
           </div>
@@ -123,43 +123,8 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
   );
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: '1rem',
-};
-const wideModalStyle: React.CSSProperties = {
-  backgroundColor: '#fff', borderRadius: '8px', padding: '1.5rem',
-  width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto',
-};
-const modalTitle: React.CSSProperties = { fontSize: '1.15rem', fontWeight: 600, marginBottom: '1rem' };
 const entryRow: React.CSSProperties = {
   display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap',
-  marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #eee',
+  marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-light)',
 };
-const inlineLabel: React.CSSProperties = { display: 'flex', flexDirection: 'column', fontSize: '0.85rem', fontWeight: 500, color: '#333', flex: '1 1 120px' };
-const inlineInput: React.CSSProperties = {
-  padding: '8px', marginTop: '0.25rem', border: '1px solid #ccc', borderRadius: '4px',
-  fontSize: '0.9rem', boxSizing: 'border-box', minHeight: '44px',
-};
-const removeBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '8px',
-  backgroundColor: '#fdecea', color: '#721c24', border: 'none', borderRadius: '4px',
-  cursor: 'pointer', fontSize: '1rem', fontWeight: 600, alignSelf: 'flex-end',
-};
-const addBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#e3f2fd', color: '#1976d2', border: 'none', borderRadius: '4px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, marginBottom: '1rem',
-};
-const btnRow: React.CSSProperties = { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' };
-const cancelBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#eee', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem',
-};
-const submitBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const successMsg: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#e8f5e9', borderRadius: '4px', color: '#2e7d32' };
-const errorMsg: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#fdecea', borderRadius: '4px', color: '#721c24' };
+const inlineLabel: React.CSSProperties = { display: 'flex', flexDirection: 'column', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text)', flex: '1 1 120px' };

@@ -181,7 +181,7 @@ export default function BatchDetailView() {
 
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
-      <h1 style={titleStyle}>{t('pigs.batchDetail')}</h1>
+      <h1 className="page-title">{t('pigs.batchDetail')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
@@ -189,7 +189,7 @@ export default function BatchDetailView() {
       {!loading && !error && batch && (
         <>
           {/* Batch attributes */}
-          <div style={detailGrid}>
+          <div className="detail-grid">
             <DetailRow label={t('pigs.status')} value={statusLabel(batch.status)} />
             <DetailRow label={t('pigs.supplyId')} value={String(batch.supply_id)} />
             <DetailRow label={t('pigs.receiveDate')} value={formatDate(batch.receive_date)} />
@@ -200,8 +200,8 @@ export default function BatchDetailView() {
           {/* Start summary */}
           {batch.total_animal_count != null && (
             <>
-              <h2 style={sectionTitle}>{t('pigs.startSummary')}</h2>
-              <div style={detailGrid}>
+              <h2 className="section-title">{t('pigs.startSummary')}</h2>
+              <div className="detail-grid">
                 <DetailRow label={t('pigs.totalAnimalCount')} value={String(batch.total_animal_count)} />
                 <DetailRow label={t('pigs.averageStartDate')} value={batch.average_start_date ? formatDate(batch.average_start_date) : undefined} />
                 <DetailRow label={t('pigs.distinctOriginCount')} value={batch.distinct_origin_count != null ? String(batch.distinct_origin_count) : undefined} />
@@ -211,46 +211,46 @@ export default function BatchDetailView() {
           )}
 
           {/* Edit batch button */}
-          <div style={actionBar}>
-            <button type="button" style={actionBtn} onClick={() => setModal('editBatch')}>
+          <div className="action-bar">
+            <button type="button" className="btn btn-primary" onClick={() => setModal('editBatch')}>
               {t('common.edit')} {t('pigs.batchDetail')}
             </button>
           </div>
 
           {/* Trigger start summary button */}
           {batch.status === 'created' && (
-            <div style={actionBar}>
-              <button type="button" style={startBtn} onClick={handleTriggerStart} disabled={triggeringStart}>
+            <div className="action-bar">
+              <button type="button" className="btn btn-accent" onClick={handleTriggerStart} disabled={triggeringStart}>
                 {triggeringStart ? t('common.loading') : t('pigs.triggerStartSummary')}
               </button>
-              {startError && <span style={inlineError}>{startError}</span>}
+              {startError && <span className="inline-error">{startError}</span>}
             </div>
           )}
 
           {/* Action buttons */}
-          <div style={actionBar}>
-            <button type="button" style={actionBtn} onClick={() => setModal('feedTruck')}>{t('pigs.newFeedTruckArrival')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('feedSchedule')}>{t('pigs.feedSchedule')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('mortality')}>{t('pigs.newMortality')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('medicationShot')}>{t('pigs.newMedicationShot')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
-            <button type="button" style={actionBtn} onClick={() => setModal('feedBalance')}>{t('pigs.newFeedBalance')}</button>
+          <div className="action-bar">
+            <button type="button" className="btn btn-primary" onClick={() => setModal('feedTruck')}>{t('pigs.newFeedTruckArrival')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('feedSchedule')}>{t('pigs.feedSchedule')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('mortality')}>{t('pigs.newMortality')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('medicationShot')}>{t('pigs.newMedicationShot')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('feedBalance')}>{t('pigs.newFeedBalance')}</button>
           </div>
 
           {/* Analytical view links */}
-          <div style={actionBar}>
-            <button type="button" style={linkBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/medication-shots`)}>{t('pigs.medicationShots')}</button>
-            <button type="button" style={linkBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/mortality-weekly`)}>{t('pigs.mortalityWeekly')}</button>
-            <button type="button" style={linkBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-consumption`)}>{t('pigs.feedConsumption')}</button>
-            <button type="button" style={linkBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-forecast`)}>{t('pigs.feedForecast')}</button>
+          <div className="action-bar">
+            <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/medication-shots`)}>{t('pigs.medicationShots')}</button>
+            <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/mortality-weekly`)}>{t('pigs.mortalityWeekly')}</button>
+            <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-consumption`)}>{t('pigs.feedConsumption')}</button>
+            <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-forecast`)}>{t('pigs.feedForecast')}</button>
           </div>
 
           {/* Feed schedule */}
-          <h2 style={sectionTitle}>{t('pigs.feedSchedule')}</h2>
-          <div style={filterBar}>
-            <select value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)} style={filterSelect}>
+          <h2 className="section-title">{t('pigs.feedSchedule')}</h2>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <select value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)} className="filter-select">
               <option value="all">{t('common.all', 'Todos')}</option>
               <option value="scheduled">{t('pigs.feedScheduleStatusScheduled', 'Agendado')}</option>
               <option value="delivered">{t('pigs.feedScheduleStatusDelivered', 'Entregue')}</option>
@@ -260,23 +260,23 @@ export default function BatchDetailView() {
           <DataTable columns={scheduleCols} data={sortedSchedule} keyExtractor={(r) => r.sk} />
 
           {/* Feed truck arrivals */}
-          <h2 style={sectionTitle}>{t('pigs.feedTruckArrivals')}</h2>
+          <h2 className="section-title">{t('pigs.feedTruckArrivals')}</h2>
           <DataTable columns={feedTruckCols} data={feedTrucks ?? []} keyExtractor={(r) => r.sk} />
 
           {/* Pig truck arrivals */}
-          <h2 style={sectionTitle}>{t('pigs.pigTruckArrivals')}</h2>
+          <h2 className="section-title">{t('pigs.pigTruckArrivals')}</h2>
           <DataTable columns={pigTruckCols} data={pigTrucks ?? []} keyExtractor={(r) => r.sk} />
 
           {/* Mortalities */}
-          <h2 style={sectionTitle}>{t('pigs.mortalities')}</h2>
+          <h2 className="section-title">{t('pigs.mortalities')}</h2>
           <DataTable columns={mortalityCols} data={mortalities ?? []} keyExtractor={(r) => r.sk} />
 
           {/* Medications */}
-          <h2 style={sectionTitle}>{t('pigs.medications')}</h2>
+          <h2 className="section-title">{t('pigs.medications')}</h2>
           <DataTable columns={medicationCols} data={medications ?? []} keyExtractor={(r) => r.sk} />
 
           {/* Feed balances */}
-          <h2 style={sectionTitle}>{t('pigs.feedBalance')}</h2>
+          <h2 className="section-title">{t('pigs.feedBalance')}</h2>
           <DataTable columns={feedBalanceCols} data={balances ?? []} keyExtractor={(r) => r.sk} />
         </>
       )}
@@ -320,41 +320,12 @@ export default function BatchDetailView() {
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
   return (
-    <div style={detailRow}>
-      <span style={detailLabel}>{label}</span>
-      <span style={detailValue}>{value ?? '—'}</span>
+    <div className="detail-row">
+      <span className="detail-label" style={{ minWidth: '180px' }}>{label}</span>
+      <span className="detail-value">{value ?? '—'}</span>
     </div>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const detailGrid: React.CSSProperties = { marginBottom: '1.5rem' };
-const detailRow: React.CSSProperties = { display: 'flex', padding: '0.4rem 0', borderBottom: '1px solid #eee', gap: '0.5rem' };
-const detailLabel: React.CSSProperties = { fontWeight: 600, minWidth: '180px', color: '#555' };
-const detailValue: React.CSSProperties = { color: '#222' };
-const sectionTitle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: 600, margin: '1.5rem 0 0.75rem' };
-const actionBar: React.CSSProperties = { display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' };
-const actionBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const startBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const linkBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#e3f2fd', color: '#1976d2', border: '1px solid #1976d2', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const inlineError: React.CSSProperties = { color: '#721c24', fontSize: '0.85rem', alignSelf: 'center' };
-const filterBar: React.CSSProperties = { marginBottom: '0.75rem' };
-const filterSelect: React.CSSProperties = {
-  padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px',
-  fontSize: '0.9rem', minHeight: '44px', minWidth: '160px',
-};
 
 
 function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
@@ -403,55 +374,55 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
   };
 
   return (
-    <div style={editOverlay} onClick={onClose} role="presentation">
-      <div style={editModal} onClick={(e) => e.stopPropagation()}>
-        <h2 style={editTitle}>{t('pigs.editBatch', 'Editar Lote')}</h2>
-        {success && <div style={editSuccess}>✓ {t('common.save')}</div>}
-        {formError && <div style={editError}>{formError}</div>}
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-title">{t('pigs.editBatch', 'Editar Lote')}</h2>
+        {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
+        {formError && <div className="alert alert-error">{formError}</div>}
         <form onSubmit={handleSubmit}>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.status')}
-            <select value={status} onChange={(e) => setStatus(e.target.value)} style={editInput}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="form-input">
               <option value="created">{t('pigs.statusCreated')}</option>
               <option value="in_progress">{t('pigs.statusInProgress')}</option>
               <option value="delivered">{t('pigs.statusDelivered')}</option>
             </select>
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.supplyId')}
-            <input type="number" min="0" step="1" value={supplyId} onChange={(e) => setSupplyId(e.target.value)} style={editInput} />
+            <input type="number" min="0" step="1" value={supplyId} onChange={(e) => setSupplyId(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.receiveDate')}
-            <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} style={editInput} />
+            <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.expectedSlaughterDate')}
-            <input type="date" value={expectedSlaughterDate} onChange={(e) => setExpectedSlaughterDate(e.target.value)} style={editInput} />
+            <input type="date" value={expectedSlaughterDate} onChange={(e) => setExpectedSlaughterDate(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.minFeedStockThreshold')}
-            <input type="number" min="0" step="1" value={minFeedStockThreshold} onChange={(e) => setMinFeedStockThreshold(e.target.value)} style={editInput} />
+            <input type="number" min="0" step="1" value={minFeedStockThreshold} onChange={(e) => setMinFeedStockThreshold(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.totalAnimalCount')}
-            <input type="number" min="0" step="1" value={totalAnimalCount} onChange={(e) => setTotalAnimalCount(e.target.value)} style={editInput} />
+            <input type="number" min="0" step="1" value={totalAnimalCount} onChange={(e) => setTotalAnimalCount(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.averageStartDate')}
-            <input type="date" value={averageStartDate} onChange={(e) => setAverageStartDate(e.target.value)} style={editInput} />
+            <input type="date" value={averageStartDate} onChange={(e) => setAverageStartDate(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.distinctOriginCount')}
-            <input type="number" min="0" step="1" value={distinctOriginCount} onChange={(e) => setDistinctOriginCount(e.target.value)} style={editInput} />
+            <input type="number" min="0" step="1" value={distinctOriginCount} onChange={(e) => setDistinctOriginCount(e.target.value)} className="form-input" />
           </label>
-          <label style={editLabel}>
+          <label className="form-label">
             {t('pigs.originTypes')}
-            <input type="text" value={originTypes} onChange={(e) => setOriginTypes(e.target.value)} style={editInput} placeholder="UPL, Creche" />
+            <input type="text" value={originTypes} onChange={(e) => setOriginTypes(e.target.value)} className="form-input" placeholder="UPL, Creche" />
           </label>
-          <div style={editBtnRow}>
-            <button type="button" style={editCancelBtn} onClick={onClose}>{t('common.cancel')}</button>
-            <button type="submit" style={editSubmitBtn} disabled={submitting}>
+          <div className="modal-btn-row">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting ? t('common.loading') : t('common.submit')}
             </button>
           </div>
@@ -460,30 +431,3 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
     </div>
   );
 }
-
-const editOverlay: React.CSSProperties = {
-  position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: '1rem',
-};
-const editModal: React.CSSProperties = {
-  backgroundColor: '#fff', borderRadius: '8px', padding: '1.5rem',
-  width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto',
-};
-const editTitle: React.CSSProperties = { fontSize: '1.15rem', fontWeight: 600, marginBottom: '1rem' };
-const editLabel: React.CSSProperties = { display: 'block', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 500, color: '#333' };
-const editInput: React.CSSProperties = {
-  display: 'block', width: '100%', padding: '10px', marginTop: '0.25rem',
-  border: '1px solid #ccc', borderRadius: '4px', fontSize: '1rem', boxSizing: 'border-box', minHeight: '44px',
-};
-const editBtnRow: React.CSSProperties = { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' };
-const editCancelBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#eee', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem',
-};
-const editSubmitBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
-const editSuccess: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#e8f5e9', borderRadius: '4px', color: '#2e7d32' };
-const editError: React.CSSProperties = { padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: '#fdecea', borderRadius: '4px', color: '#721c24' };

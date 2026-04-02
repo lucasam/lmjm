@@ -70,7 +70,7 @@ export default function PigDashboard() {
       userEmail={user?.email}
       onLogout={logout}
     >
-      <h1 style={titleStyle}>{t('pigs.dashboard')}</h1>
+      <h1 className="page-title">{t('pigs.dashboard')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={() => { refetchModules(); refetchBatches(); }} />}
@@ -78,7 +78,7 @@ export default function PigDashboard() {
       {!loading && !error && (
         <>
           {/* Module summary */}
-          <h2 style={sectionTitle}>{t('pigs.modules')}</h2>
+          <h2 className="section-title">{t('pigs.modules')}</h2>
           <DataTable
             columns={moduleCols}
             data={modules ?? []}
@@ -87,9 +87,9 @@ export default function PigDashboard() {
           />
 
           {/* Active batches */}
-          <div style={actionBar}>
-            <h2 style={sectionTitle}>{t('pigs.batches')}</h2>
-            <button type="button" style={actionBtn} onClick={() => setShowBatchForm(true)}>
+          <div className="action-bar" style={{ justifyContent: 'space-between' }}>
+            <h2 className="section-title" style={{ margin: 0, border: 'none', paddingBottom: 0 }}>{t('pigs.batches')}</h2>
+            <button type="button" className="btn btn-primary" onClick={() => setShowBatchForm(true)}>
               {t('pigs.newBatch')}
             </button>
           </div>
@@ -111,12 +111,3 @@ export default function PigDashboard() {
     </Layout>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const sectionTitle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: 600, margin: '1.5rem 0 0.75rem' };
-const actionBar: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' };
-const actionBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#1976d2', color: '#fff', border: 'none', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};

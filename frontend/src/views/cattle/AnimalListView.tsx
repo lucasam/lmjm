@@ -43,7 +43,7 @@ export default function AnimalListView() {
       userEmail={user?.email}
       onLogout={logout}
     >
-      <h1 style={titleStyle}>{t('cattle.animalList')}</h1>
+      <h1 className="page-title">{t('cattle.animalList')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetch} />}
@@ -58,9 +58,3 @@ export default function AnimalListView() {
     </Layout>
   );
 }
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '1.25rem',
-  fontWeight: 600,
-  marginBottom: '1rem',
-};

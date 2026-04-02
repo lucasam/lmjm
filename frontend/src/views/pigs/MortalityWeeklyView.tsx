@@ -25,7 +25,6 @@ function computeWeeklyData(batch: Batch, mortalities: Mortality[]): WeekRow[] {
 
   const receiveDate = new Date(batch.receive_date + 'T00:00:00');
 
-  // Assign each mortality to a week number (week 1 = days 0-6)
   const weekDeaths: Record<number, number> = {};
   let maxWeek = 0;
   for (const m of mortalities) {
@@ -38,7 +37,6 @@ function computeWeeklyData(batch: Batch, mortalities: Mortality[]): WeekRow[] {
     if (week > maxWeek) maxWeek = week;
   }
 
-  // Build rows for all weeks up to maxWeek (or at least 1 if there are mortalities)
   const rows: WeekRow[] = [];
   let cumulativeDeaths = 0;
   const weeksToShow = Math.max(maxWeek, 1);
@@ -95,42 +93,42 @@ export default function MortalityWeeklyView() {
 
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
-      <h1 style={titleStyle}>{t('pigs.mortalityWeekly')}</h1>
+      <h1 className="page-title">{t('pigs.mortalityWeekly')}</h1>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
 
       {!loading && !error && noStartSummary && (
-        <div style={warningBox}>
+        <div className="alert alert-error" style={{ backgroundColor: '#fff3cd', borderColor: '#ffc107', color: '#856404' }}>
           {t('pigs.startSummaryRequired', 'O resumo inicial deve ser gerado antes de calcular a mortalidade semanal.')}
         </div>
       )}
 
       {!loading && !error && !noStartSummary && (
-        <div style={tableWrapper}>
-          <table style={tableStyle}>
+        <div className="table-wrapper">
+          <table className="table">
             <thead>
               <tr>
-                <th style={thStyle}>{t('pigs.weekNumber', 'Semana')}</th>
-                <th style={thStyle}>{t('pigs.dateRange', 'Período')}</th>
-                <th style={thStyle}>{t('pigs.deathCount', 'Mortes')}</th>
-                <th style={thStyle}>{t('pigs.weeklyPct', '% Semanal')}</th>
-                <th style={thStyle}>{t('pigs.cumulativePct', '% Acumulada')}</th>
+                <th>{t('pigs.weekNumber', 'Semana')}</th>
+                <th>{t('pigs.dateRange', 'Período')}</th>
+                <th>{t('pigs.deathCount', 'Mortes')}</th>
+                <th>{t('pigs.weeklyPct', '% Semanal')}</th>
+                <th>{t('pigs.cumulativePct', '% Acumulada')}</th>
               </tr>
             </thead>
             <tbody>
               {weeklyData.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={emptyCell}>{t('common.noData')}</td>
+                  <td colSpan={5} className="table-empty">{t('common.noData')}</td>
                 </tr>
               ) : (
                 weeklyData.map((row) => (
                   <tr key={row.week}>
-                    <td style={tdStyle}>{row.week}</td>
-                    <td style={tdStyle}>{formatDate(row.startDate)} – {formatDate(row.endDate)}</td>
-                    <td style={tdStyle}>{row.deathCount}</td>
-                    <td style={tdStyle}>{formatNumber(row.weeklyPct, 2)}%</td>
-                    <td style={tdStyle}>{formatNumber(row.cumulativePct, 2)}%</td>
+                    <td>{row.week}</td>
+                    <td>{formatDate(row.startDate)} – {formatDate(row.endDate)}</td>
+                    <td>{row.deathCount}</td>
+                    <td>{formatNumber(row.weeklyPct, 2)}%</td>
+                    <td>{formatNumber(row.cumulativePct, 2)}%</td>
                   </tr>
                 ))
               )}
@@ -139,31 +137,11 @@ export default function MortalityWeeklyView() {
         </div>
       )}
 
-      <div style={backBar}>
-        <button type="button" style={backBtn} onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
+      <div style={{ marginTop: '1.5rem' }}>
+        <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}`)}>
           {t('common.back')}
         </button>
       </div>
     </Layout>
   );
 }
-
-const titleStyle: React.CSSProperties = { fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' };
-const warningBox: React.CSSProperties = {
-  padding: '1rem', margin: '1rem 0', backgroundColor: '#fff3cd', border: '1px solid #ffc107',
-  borderRadius: '6px', color: '#856404',
-};
-const tableWrapper: React.CSSProperties = { overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' };
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', padding: '0.75rem 0.5rem', borderBottom: '2px solid #ddd',
-  whiteSpace: 'nowrap', fontWeight: 600, backgroundColor: '#f5f5f5',
-};
-const tdStyle: React.CSSProperties = { padding: '0.75rem 0.5rem', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' };
-const emptyCell: React.CSSProperties = { padding: '2rem', textAlign: 'center', color: '#888' };
-const backBar: React.CSSProperties = { marginTop: '1.5rem' };
-const backBtn: React.CSSProperties = {
-  minWidth: '44px', minHeight: '44px', padding: '10px 18px',
-  backgroundColor: '#e3f2fd', color: '#1976d2', border: '1px solid #1976d2', borderRadius: '6px',
-  cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-};
