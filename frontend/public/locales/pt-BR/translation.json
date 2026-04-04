@@ -64,7 +64,11 @@
     "semen": "Sêmen",
     "diagnosticDate": "Data do Diagnóstico",
     "breedingDate": "Data da Cobertura",
-    "expectedDeliveryDate": "Data Prevista do Parto"
+    "expectedDeliveryDate": "Data Prevista do Parto",
+    "weights": "Pesagens",
+    "newWeight": "Nova Pesagem",
+    "weight": "Peso (kg)",
+    "weighingDate": "Data da Pesagem"
   },
   "pigs": {
     "dashboard": "Painel de Suínos",

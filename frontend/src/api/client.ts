@@ -2,6 +2,7 @@ import type {
   CattleAnimal,
   Insemination,
   Diagnostic,
+  Weight,
   Module,
   Batch,
   FeedSchedule,
@@ -228,6 +229,14 @@ export function postInsemination(earTag: string, data: PostInseminationRequest):
 
 export function postDiagnostic(earTag: string, data: PostDiagnosticRequest): Promise<void> {
   return post(`/cattle/animals/${encodeURIComponent(earTag)}/diagnostics`, data);
+}
+
+export function listWeights(earTag: string): Promise<Weight[]> {
+  return get<Weight[]>(`/cattle/animals/${encodeURIComponent(earTag)}/pesos`);
+}
+
+export function postWeight(earTag: string, data: { weighing_date: string; weight_kg: number }): Promise<void> {
+  return post(`/cattle/animals/${encodeURIComponent(earTag)}/pesos`, data);
 }
 
 // --- Pig Infrastructure ---

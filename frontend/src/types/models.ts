@@ -129,3 +129,9 @@ export interface FeedBalance {
   measurement_date: string;
   balance_kg: number;
 }
+
+export interface Weight {
+  pk: string;
+  weight_kg: number;
+  weighing_date: string;
+}

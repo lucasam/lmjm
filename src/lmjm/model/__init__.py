@@ -11,6 +11,7 @@ from lmjm.model.medication_shot import MedicationShot
 from lmjm.model.module import Module
 from lmjm.model.mortality import Mortality
 from lmjm.model.pig_truck_arrival import PigTruckArrival
+from lmjm.model.weight import Weight
 
 __all__ = [
     "Animal",
@@ -26,4 +27,5 @@ __all__ = [
     "Module",
     "Mortality",
     "PigTruckArrival",
+    "Weight",
 ]
