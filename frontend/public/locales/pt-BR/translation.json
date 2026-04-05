@@ -172,7 +172,13 @@
     "feedScheduleStatusCanceled": "Cancelado",
     "quickActions": "Ações Rápidas",
     "batchConfig": "Configuração do Lote",
-    "editBatch": "Editar Lote"
+    "editBatch": "Editar Lote",
+    "fiscalDocuments": "Notas Fiscais",
+    "issueDate": "Data de Emissão",
+    "productDescription": "Produto",
+    "supplierName": "Fornecedor",
+    "orderNumber": "Pedido",
+    "batchPk": "Lote"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",

@@ -63,6 +63,7 @@ export interface FeedSchedule {
   expected_amount_kg: number;
   status: 'scheduled' | 'delivered' | 'canceled';
   fulfilled_by?: string;
+  feed_description?: string;
 }
 
 export interface FeedTruckArrival {

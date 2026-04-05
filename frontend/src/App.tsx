@@ -13,6 +13,7 @@ import MedicationShotMonthlyView from './views/pigs/MedicationShotMonthlyView';
 import MortalityWeeklyView from './views/pigs/MortalityWeeklyView';
 import FeedConsumptionDataView from './views/pigs/FeedConsumptionDataView';
 import FeedBalanceForecastView from './views/pigs/FeedBalanceForecastView';
+import FiscalDocumentListView from './views/pigs/FiscalDocumentListView';
 
 function NotFound() {
   return (
@@ -141,6 +142,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <FeedBalanceForecastView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/fiscal-documents"
+        element={
+          <ProtectedRoute>
+            <FiscalDocumentListView />
           </ProtectedRoute>
         }
       />

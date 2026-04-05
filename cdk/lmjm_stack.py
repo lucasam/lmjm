@@ -916,6 +916,40 @@ class LmjmStack(Stack):
         raw_material_types_resource = api.root.add_resource("raw-material-types")
         add_cognito_method(raw_material_types_resource, "GET", apigw.LambdaIntegration(get_raw_material_types))
 
+        # --- All Fiscal Documents + Reprocess ---
+
+        get_all_fiscal_documents = _lambda.Function(
+            self,
+            "GetAllFiscalDocumentsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_all_fiscal_documents.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_all_fiscal_documents)
+
+        reprocess_fiscal_document = _lambda.Function(
+            self,
+            "ReprocessFiscalDocumentLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.reprocess_fiscal_document.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name, "EMAIL_BUCKET": fiscal_email_bucket.bucket_name},
+        )
+        table.grant_read_write_data(reprocess_fiscal_document)
+
+        # /fiscal-documents (top-level)
+        all_fiscal_documents_resource = api.root.add_resource("fiscal-documents")
+        add_cognito_method(all_fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_all_fiscal_documents))
+
+        # /fiscal-documents/reprocess
+        reprocess_resource = all_fiscal_documents_resource.add_resource("reprocess")
+        add_cognito_method(reprocess_resource, "POST", apigw.LambdaIntegration(reprocess_fiscal_document))
+
         CfnOutput(
             self,
             "ApiGatewayUrl",

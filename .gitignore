@@ -32,3 +32,4 @@ frontend/tsconfig.tsbuildinfo
 
 # Kiro
 .kiro/
+.hypothesis

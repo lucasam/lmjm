@@ -385,3 +385,13 @@ export function listFeedScheduleFiscalDocuments(batchId: string): Promise<FeedSc
 export function listRawMaterialTypes(): Promise<RawMaterialType[]> {
   return get<RawMaterialType[]>('/raw-material-types');
 }
+
+// --- All Fiscal Documents ---
+
+export function listAllFiscalDocuments(): Promise<FiscalDocument[]> {
+  return get<FiscalDocument[]>('/fiscal-documents');
+}
+
+export function reprocessFiscalDocument(pk: string, fiscalDocumentNumber: string): Promise<void> {
+  return post('/fiscal-documents/reprocess', { pk, fiscal_document_number: fiscalDocumentNumber });
+}

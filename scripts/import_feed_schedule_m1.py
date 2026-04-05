@@ -18,11 +18,11 @@ BATCH_PK = "293de398-0cca-4613-b528-7af1010c64eb"
 # Material code → feed type name mapping
 FEED_TYPE_MAP = {
     "130867": "ST01",
-    "130871": "ST02",   # TODO: provide mapping
-    "130887": "ST03",   # TODO: provide mapping
+    "130871": "ST02",  
+    "130887": "ST03",   
     "130888": "ST04",
     "765668": "ST05",
-    "130906": "ST06",   # TODO: provide mapping
+    "130906": "ST06",
 }
 
 # Feed schedule data extracted from HTML (left column only, preserving same-day duplicates)

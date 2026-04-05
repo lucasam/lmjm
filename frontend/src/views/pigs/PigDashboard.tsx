@@ -89,9 +89,14 @@ export default function PigDashboard() {
           {/* Active batches */}
           <div className="action-bar" style={{ justifyContent: 'space-between' }}>
             <h2 className="section-title" style={{ margin: 0, border: 'none', paddingBottom: 0 }}>{t('pigs.batches')}</h2>
-            <button type="button" className="btn btn-primary" onClick={() => setShowBatchForm(true)}>
-              {t('pigs.newBatch')}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="button" className="btn btn-outline" onClick={() => navigate('/pigs/fiscal-documents')}>
+                {t('pigs.fiscalDocuments', 'Notas Fiscais')}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setShowBatchForm(true)}>
+                {t('pigs.newBatch')}
+              </button>
+            </div>
           </div>
           <DataTable
             columns={batchCols}

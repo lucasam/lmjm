@@ -37,9 +37,8 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
     setFiscalDocumentNumber(doc.fiscal_document_number);
     setActualAmountKg(String(doc.actual_amount_kg));
 
-    // Map product_code to feed type description via RawMaterialType
-    const rmt = (rawMaterialTypes ?? []).find((r) => r.code === doc.product_code);
-    setFeedType(rmt ? rmt.description : doc.product_code);
+    // Map product_code to feed type code via RawMaterialType
+    setFeedType(doc.product_code);
 
     // Pre-fill feed_schedule_id if present
     if (doc.feed_schedule_id) {
@@ -116,7 +115,12 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
 
           <label className="form-label">
             {t('pigs.feedType')} *
-            <input type="text" required value={feedType} onChange={(e) => setFeedType(e.target.value)} className="form-input" />
+            <select required value={feedType} onChange={(e) => setFeedType(e.target.value)} className="form-input">
+              <option value="">—</option>
+              {(rawMaterialTypes ?? []).filter((r) => r.category === 'feed').map((r) => (
+                <option key={r.code} value={r.code}>{r.description} ({r.code})</option>
+              ))}
+            </select>
           </label>
 
           {pendingSchedule.length > 0 && (
