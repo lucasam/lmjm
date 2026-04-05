@@ -35,3 +35,11 @@ class FeedScheduleRepo:
 
     def delete(self, pk: str, sk: str) -> None:
         self.table.delete_item(Key={"pk": pk, "sk": sk})
+
+    def update_status_and_fulfilled_by(self, pk: str, sk: str, status: str, fulfilled_by: str) -> None:
+        self.table.update_item(
+            Key={"pk": pk, "sk": sk},
+            UpdateExpression="SET #s = :s, fulfilled_by = :f",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":s": status, ":f": fulfilled_by},
+        )

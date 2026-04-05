@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { postMedication } from '../../api/client';
+import { listRawMaterialTypes, postMedication } from '../../api/client';
+import type { RawMaterialType } from '../../types/models';
 
 interface MedicationFormProps {
   batchId: string;
@@ -16,6 +17,30 @@ export default function MedicationForm({ batchId, onClose, onSuccess }: Medicati
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [medicineTypes, setMedicineTypes] = useState<RawMaterialType[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRawMaterialTypes()
+      .then((types) => {
+        if (!cancelled) {
+          setMedicineTypes(types.filter((t) => t.category === 'medicine'));
+        }
+      })
+      .catch(() => {
+        // Fall back to empty list (text input will be shown)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTypes(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleMedicineSelect = (code: string) => {
+    const rmt = medicineTypes.find((m) => m.code === code);
+    setMedicationName(rmt ? rmt.description : '');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +72,21 @@ export default function MedicationForm({ batchId, onClose, onSuccess }: Medicati
         <form onSubmit={handleSubmit}>
           <label className="form-label">
             {t('pigs.medicationName')} *
-            <input type="text" required value={medicationName} onChange={(e) => setMedicationName(e.target.value)} className="form-input" />
+            {!loadingTypes && medicineTypes.length > 0 ? (
+              <select
+                required
+                value={medicineTypes.find((m) => m.description === medicationName)?.code ?? ''}
+                onChange={(e) => handleMedicineSelect(e.target.value)}
+                className="form-input"
+              >
+                <option value="">—</option>
+                {medicineTypes.map((m) => (
+                  <option key={m.code} value={m.code}>{m.description}</option>
+                ))}
+              </select>
+            ) : (
+              <input type="text" required value={medicationName} onChange={(e) => setMedicationName(e.target.value)} className="form-input" />
+            )}
           </label>
 
           <label className="form-label">

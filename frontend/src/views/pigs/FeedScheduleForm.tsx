@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { updateFeedSchedule } from '../../api/client';
+import { FEED_TYPE_MAP } from '../../constants/feedTypes';
 import type { FeedSchedule } from '../../types/models';
 
 interface FeedScheduleEntry {
@@ -87,7 +88,12 @@ export default function FeedScheduleForm({ batchId, existing, onClose, onSuccess
             <div key={entry.sk || `new-${idx}`} style={entryRow}>
               <label style={inlineLabel}>
                 {t('pigs.feedType')}
-                <input type="text" required value={entry.feed_type} onChange={(e) => updateEntry(idx, 'feed_type', e.target.value)} className="form-input" />
+                <select required value={entry.feed_type} onChange={(e) => updateEntry(idx, 'feed_type', e.target.value)} className="form-input">
+                  <option value="">—</option>
+                  {Object.entries(FEED_TYPE_MAP).map(([code, desc]) => (
+                    <option key={code} value={code}>{desc} ({code})</option>
+                  ))}
+                </select>
               </label>
               <label style={inlineLabel}>
                 {t('pigs.plannedDate')}

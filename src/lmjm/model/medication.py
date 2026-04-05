@@ -8,3 +8,4 @@ class Medication:
     medication_name: str = ""
     expiration_date: str = ""
     part_number: str = ""
+    raw_material_code: str = ""

@@ -20,6 +20,8 @@ from aws_cdk import aws_route53 as route53
 from aws_cdk import aws_route53_targets as targets
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_s3_deployment as s3deploy
+from aws_cdk import aws_ses as ses
+from aws_cdk import aws_ses_actions as ses_actions
 from aws_cdk import aws_ssm as ssm
 from constructs import Construct
 
@@ -754,6 +756,87 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_feed_balances)
 
+        # --- Fiscal Email Intake ---
+
+        fiscal_email_bucket = s3.Bucket(
+            self,
+            "FiscalEmailBucket",
+            bucket_name=f"lmjm-fiscal-emails-{Stack.of(self).account}",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            lifecycle_rules=[s3.LifecycleRule(expiration=Duration.days(90))],
+        )
+
+        process_fiscal_email = _lambda.Function(
+            self,
+            "ProcessFiscalEmailLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(60),
+            memory_size=2048,
+            handler="lmjm.process_fiscal_email.lambda_handler",
+            code=lambda_code,
+            environment={
+                "TABLE_NAME": table.table_name,
+                "EMAIL_BUCKET": fiscal_email_bucket.bucket_name,
+            },
+        )
+        table.grant_read_write_data(process_fiscal_email)
+        fiscal_email_bucket.grant_read(process_fiscal_email)
+
+        receipt_rule_set = ses.ReceiptRuleSet(self, "FiscalEmailRuleSet")
+        receipt_rule_set.add_rule(
+            "FiscalEmailRule",
+            recipients=["fiscal@lmjm.net"],
+            actions=[
+                ses_actions.S3(bucket=fiscal_email_bucket),
+                ses_actions.Lambda(function=process_fiscal_email),
+            ],
+        )
+
+        route53.MxRecord(
+            self,
+            "FiscalMxRecord",
+            zone=hosted_zone,
+            values=[route53.MxRecordValue(host_name="inbound-smtp.sa-east-1.amazonaws.com", priority=10)],
+        )
+
+        # --- Fiscal Document API Lambdas ---
+
+        get_fiscal_documents = _lambda.Function(
+            self,
+            "GetFiscalDocumentsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_fiscal_documents.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_fiscal_documents)
+
+        get_feed_schedule_fiscal_documents = _lambda.Function(
+            self,
+            "GetFeedScheduleFiscalDocsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_feed_schedule_fiscal_documents.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_schedule_fiscal_documents)
+
+        get_raw_material_types = _lambda.Function(
+            self,
+            "GetRawMaterialTypesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_raw_material_types.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_raw_material_types)
+
         # --- Pig API Gateway Routes ---
 
         # /pigs/modules
@@ -818,6 +901,20 @@ class LmjmStack(Stack):
         feed_balances_resource = batch_resource.add_resource("feed-balances")
         add_cognito_method(feed_balances_resource, "POST", apigw.LambdaIntegration(post_feed_balance))
         add_cognito_method(feed_balances_resource, "GET", apigw.LambdaIntegration(get_feed_balances))
+
+        # /pigs/batches/{batch_id}/fiscal-documents
+        fiscal_documents_resource = batch_resource.add_resource("fiscal-documents")
+        add_cognito_method(fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_fiscal_documents))
+
+        # /pigs/batches/{batch_id}/feed-schedule-fiscal-documents
+        feed_schedule_fiscal_documents_resource = batch_resource.add_resource("feed-schedule-fiscal-documents")
+        add_cognito_method(
+            feed_schedule_fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_feed_schedule_fiscal_documents)
+        )
+
+        # /raw-material-types (top-level, not under pigs)
+        raw_material_types_resource = api.root.add_resource("raw-material-types")
+        add_cognito_method(raw_material_types_resource, "GET", apigw.LambdaIntegration(get_raw_material_types))
 
         CfnOutput(
             self,

@@ -13,6 +13,9 @@ import type {
   MedicationShot,
   FeedConsumptionPlanEntry,
   FeedBalance,
+  FiscalDocument,
+  FeedScheduleFiscalDocument,
+  RawMaterialType,
 } from '../types/models';
 
 // Request types for POST/PUT operations
@@ -365,4 +368,20 @@ export function postFeedBalance(batchId: string, data: PostFeedBalanceRequest): 
 
 export function listFeedBalances(batchId: string): Promise<FeedBalance[]> {
   return get<FeedBalance[]>(`/pigs/batches/${encodeURIComponent(batchId)}/feed-balances`);
+}
+
+// --- Fiscal Documents ---
+
+export function listFiscalDocuments(batchId: string): Promise<FiscalDocument[]> {
+  return get<FiscalDocument[]>(`/pigs/batches/${encodeURIComponent(batchId)}/fiscal-documents`);
+}
+
+export function listFeedScheduleFiscalDocuments(batchId: string): Promise<FeedScheduleFiscalDocument[]> {
+  return get<FeedScheduleFiscalDocument[]>(`/pigs/batches/${encodeURIComponent(batchId)}/feed-schedule-fiscal-documents`);
+}
+
+// --- Raw Material Types ---
+
+export function listRawMaterialTypes(): Promise<RawMaterialType[]> {
+  return get<RawMaterialType[]>('/raw-material-types');
 }

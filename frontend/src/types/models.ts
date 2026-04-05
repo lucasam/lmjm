@@ -107,6 +107,38 @@ export interface Medication {
   medication_name: string;
   expiration_date: string;
   part_number: string;
+  raw_material_code?: string;
+}
+
+export interface RawMaterialType {
+  pk: string;
+  sk: string;
+  code: string;
+  description: string;
+  category: 'feed' | 'medicine';
+}
+
+export interface FiscalDocument {
+  pk: string;
+  sk: string;
+  fiscal_document_number: string;
+  issue_date: string;
+  actual_amount_kg: number;
+  product_code: string;
+  product_description: string;
+  supplier_name: string;
+  order_number: string;
+}
+
+export interface FeedScheduleFiscalDocument {
+  pk: string;
+  sk: string;
+  fiscal_document_number: string;
+  feed_schedule_id?: string;
+  status: 'pending' | 'used' | 'discarded';
+  product_code: string;
+  actual_amount_kg: number;
+  issue_date: string;
 }
 
 export interface MedicationShot {

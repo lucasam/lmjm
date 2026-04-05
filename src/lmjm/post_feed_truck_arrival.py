@@ -9,7 +9,7 @@ from urllib.parse import unquote
 import boto3
 
 from lmjm.model import FeedTruckArrival
-from lmjm.repo import BatchRepo, FeedScheduleRepo, FeedTruckArrivalRepo
+from lmjm.repo import BatchRepo, FeedScheduleFiscalDocumentRepo, FeedScheduleRepo, FeedTruckArrivalRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
 
@@ -20,6 +20,7 @@ table = dynamodb.Table(TABLE_NAME)
 batch_repo = BatchRepo(table)
 feed_truck_arrival_repo = FeedTruckArrivalRepo(table)
 feed_schedule_repo = FeedScheduleRepo(table)
+feed_schedule_fiscal_document_repo = FeedScheduleFiscalDocumentRepo(table)
 
 
 @dataclasses.dataclass
@@ -79,5 +80,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         feed_schedule_id=request.feed_schedule_id,
     )
     feed_truck_arrival_repo.put(arrival)
+
+    # Update FeedScheduleFiscalDocument status to "used" if pending
+    fiscal_doc = feed_schedule_fiscal_document_repo.get(batch_id, request.fiscal_document_number)
+    if fiscal_doc and fiscal_doc.status == "pending":
+        feed_schedule_fiscal_document_repo.update_status(fiscal_doc.pk, fiscal_doc.sk, "used")
+
+    # Update FeedSchedule status to "delivered" if feed_schedule_id provided
+    if request.feed_schedule_id:
+        feed_schedule_repo.update_status_and_fulfilled_by(batch_id, request.feed_schedule_id, "delivered", arrival.sk)
 
     return respond(status_code=201, body=serialize_to_dict(arrival))

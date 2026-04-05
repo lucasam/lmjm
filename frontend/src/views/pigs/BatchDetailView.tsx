@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
+import { getFeedTypeDescription } from '../../constants/feedTypes';
 import {
   getBatch,
   getFeedSchedule,
@@ -14,6 +15,8 @@ import {
   getFeedConsumptionPlan,
   listFeedBalances,
   updateBatch,
+  listFeedScheduleFiscalDocuments,
+  listRawMaterialTypes,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
@@ -69,6 +72,8 @@ export default function BatchDetailView() {
   const fetchMedications = useCallback(() => listMedications(id), [id]);
   const fetchPlan = useCallback(() => getFeedConsumptionPlan(id), [id]);
   const fetchBalances = useCallback(() => listFeedBalances(id), [id]);
+  const fetchFiscalDocs = useCallback(() => listFeedScheduleFiscalDocuments(id), [id]);
+  const fetchRawMaterialTypes = useCallback(() => listRawMaterialTypes(), []);
 
   const { data: batch, loading: l1, error: e1, refetch: rBatch } = useApi(fetchBatch);
   const { data: schedule, loading: l2, error: e2, refetch: rSchedule } = useApi(fetchSchedule);
@@ -78,6 +83,8 @@ export default function BatchDetailView() {
   const { data: medications, loading: l6, error: e6, refetch: rMedications } = useApi(fetchMedications);
   const { data: plan, loading: l7, error: e7, refetch: rPlan } = useApi(fetchPlan);
   const { data: balances, loading: l8, error: e8, refetch: rBalances } = useApi(fetchBalances);
+  const { data: fiscalDocs, refetch: rFiscalDocs } = useApi(fetchFiscalDocs);
+  const { data: rawMaterialTypes } = useApi(fetchRawMaterialTypes);
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
   const error = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
@@ -127,7 +134,7 @@ export default function BatchDetailView() {
   }, [schedule, scheduleFilter]);
 
   const scheduleCols: Column<FeedSchedule>[] = [
-    { header: t('pigs.feedType'), accessor: (r) => r.feed_type },
+    { header: t('pigs.feedType'), accessor: (r) => getFeedTypeDescription(r.feed_type) },
     { header: t('pigs.plannedDate'), accessor: (r) => formatDate(r.planned_date) },
     { header: t('pigs.expectedAmountKg'), accessor: (r) => formatNumber(r.expected_amount_kg) },
     { header: t('pigs.status'), accessor: (r) => translateScheduleStatus(r.status ?? 'scheduled') },
@@ -135,7 +142,7 @@ export default function BatchDetailView() {
 
   const feedTruckCols: Column<FeedTruckArrival>[] = [
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
-    { header: t('pigs.feedType'), accessor: (r) => r.feed_type },
+    { header: t('pigs.feedType'), accessor: (r) => getFeedTypeDescription(r.feed_type) },
     { header: t('pigs.actualAmountKg'), accessor: (r) => formatNumber(r.actual_amount_kg) },
     { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
   ];
@@ -181,7 +188,15 @@ export default function BatchDetailView() {
 
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
-      <h1 className="page-title">{t('pigs.batchDetail')}</h1>
+      {/* Header with title + low-usage config icons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h1 className="page-title" style={{ margin: 0, flex: 1 }}>{t('pigs.batchDetail')}</h1>
+        <button type="button" className="btn btn-outline" style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} onClick={() => setModal('editBatch')} title={t('common.edit')}>✏️</button>
+        {batch && batch.status === 'created' && (
+          <button type="button" className="btn btn-outline" style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} onClick={handleTriggerStart} disabled={triggeringStart} title={t('pigs.triggerStartSummary')}>🚀</button>
+        )}
+        {startError && <span className="inline-error">{startError}</span>}
+      </div>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
@@ -210,32 +225,12 @@ export default function BatchDetailView() {
             </>
           )}
 
-          {/* Edit batch button */}
+          {/* High-usage daily actions */}
+          <h2 className="section-title">{t('pigs.quickActions', 'Ações Rápidas')}</h2>
           <div className="action-bar">
-            <button type="button" className="btn btn-primary" onClick={() => setModal('editBatch')}>
-              {t('common.edit')} {t('pigs.batchDetail')}
-            </button>
-          </div>
-
-          {/* Trigger start summary button */}
-          {batch.status === 'created' && (
-            <div className="action-bar">
-              <button type="button" className="btn btn-accent" onClick={handleTriggerStart} disabled={triggeringStart}>
-                {triggeringStart ? t('common.loading') : t('pigs.triggerStartSummary')}
-              </button>
-              {startError && <span className="inline-error">{startError}</span>}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="action-bar">
-            <button type="button" className="btn btn-primary" onClick={() => setModal('feedTruck')}>{t('pigs.newFeedTruckArrival')}</button>
-            <button type="button" className="btn btn-primary" onClick={() => setModal('feedSchedule')}>{t('pigs.feedSchedule')}</button>
-            <button type="button" className="btn btn-primary" onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
             <button type="button" className="btn btn-primary" onClick={() => setModal('mortality')}>{t('pigs.newMortality')}</button>
-            <button type="button" className="btn btn-primary" onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('feedTruck')}>{t('pigs.newFeedTruckArrival')}</button>
             <button type="button" className="btn btn-primary" onClick={() => setModal('medicationShot')}>{t('pigs.newMedicationShot')}</button>
-            <button type="button" className="btn btn-primary" onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
             <button type="button" className="btn btn-primary" onClick={() => setModal('feedBalance')}>{t('pigs.newFeedBalance')}</button>
           </div>
 
@@ -278,12 +273,21 @@ export default function BatchDetailView() {
           {/* Feed balances */}
           <h2 className="section-title">{t('pigs.feedBalance')}</h2>
           <DataTable columns={feedBalanceCols} data={balances ?? []} keyExtractor={(r) => r.sk} />
+
+          {/* Batch configuration actions (low frequency) */}
+          <h2 className="section-title">{t('pigs.batchConfig', 'Configuração do Lote')}</h2>
+          <div className="action-bar">
+            <button type="button" className="btn btn-secondary" onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setModal('feedSchedule')}>{t('pigs.feedSchedule')}</button>
+          </div>
         </>
       )}
 
       {/* Modals */}
       {modal === 'feedTruck' && (
-        <FeedTruckArrivalForm batchId={id} feedSchedule={schedule ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(() => { rFeedTrucks(); rSchedule(); })} />
+        <FeedTruckArrivalForm batchId={id} feedSchedule={schedule ?? []} pendingFiscalDocs={fiscalDocs ?? []} rawMaterialTypes={rawMaterialTypes ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(() => { rFeedTrucks(); rSchedule(); rFiscalDocs(); })} />
       )}
       {modal === 'feedSchedule' && (
         <FeedScheduleForm batchId={id} existing={schedule ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rSchedule)} />

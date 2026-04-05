@@ -169,7 +169,10 @@
     "belowThreshold": "Abaixo do estoque mínimo",
     "feedScheduleStatusScheduled": "Agendado",
     "feedScheduleStatusDelivered": "Entregue",
-    "feedScheduleStatusCanceled": "Cancelado"
+    "feedScheduleStatusCanceled": "Cancelado",
+    "quickActions": "Ações Rápidas",
+    "batchConfig": "Configuração do Lote",
+    "editBatch": "Editar Lote"
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",
