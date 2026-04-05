@@ -78,6 +78,26 @@ export default function AnimalListView() {
     });
   };
 
+  const summary = useMemo(() => {
+    const list = activeAnimals;
+    let prenhe = 0, inseminada = 0, lactante = 0, vazia = 0;
+    const tagCounts: Record<string, number> = {};
+
+    for (const a of list) {
+      const status = getReproductiveStatus(a);
+      if (status.includes('Prenhe')) prenhe++;
+      if (status.includes('Inseminada')) inseminada++;
+      if (status.includes('Lactante')) lactante++;
+      if (status === 'Vazia') vazia++;
+
+      const lastTag = a.tags && a.tags.length > 0 ? a.tags[a.tags.length - 1] : '—';
+      tagCounts[lastTag] = (tagCounts[lastTag] || 0) + 1;
+    }
+
+    const tagEntries = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+    return { total: list.length, prenhe, inseminada, lactante, vazia, tagEntries };
+  }, [activeAnimals]);
+
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.cattle') },
@@ -101,6 +121,47 @@ export default function AnimalListView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+      )}
+
+      {!loading && !error && activeAnimals.length > 0 && (
+        <div style={{
+          display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap',
+          marginBottom: 'var(--space-md)',
+        }}>
+          {/* Situation summary */}
+          <div style={{
+            flex: '1 1 200px', background: 'var(--surface)',
+            border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-sm) var(--space-md)', fontSize: '0.85rem',
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: 'var(--space-xs)', color: 'var(--primary)' }}>
+              {t('cattle.summary', 'Resumo')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0 var(--space-md)' }}>
+              <span>Total: <b>{displayAnimals.length}</b></span>
+              <span>Prenhe: <b>{summary.prenhe}</b></span>
+              <span>Inseminada: <b>{summary.inseminada}</b></span>
+              <span>Lactante: <b>{summary.lactante}</b></span>
+              <span>Vazia: <b>{summary.vazia}</b></span>
+            </div>
+          </div>
+
+          {/* Tag group summary */}
+          <div style={{
+            flex: '1 1 200px', background: 'var(--surface)',
+            border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-sm) var(--space-md)', fontSize: '0.85rem',
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: 'var(--space-xs)', color: 'var(--primary)' }}>
+              {t('cattle.tagSummary', 'Por Última Tag')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0 var(--space-md)' }}>
+              {summary.tagEntries.map(([tag, count]) => (
+                <span key={tag}>{tag}: <b>{count}</b></span>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
