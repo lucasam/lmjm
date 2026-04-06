@@ -1,7 +1,11 @@
 import dataclasses
+import logging
 import xml.etree.ElementTree as ET
 
 NS = {"nfe": "http://www.portalfiscal.inf.br/nfe"}
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 @dataclasses.dataclass
@@ -15,6 +19,7 @@ class ParsedNfe:
     order_number: str = ""  # xPed (purchase order)
     lot_number: str = ""  # rastro/nLote
     expiration_date: str = ""  # rastro/dVal (YYYY-MM-DD)
+    scheduled_date: str = ""  # from infAdic/infCpl "Data OCR: DD MM YYYY" → YYYY-MM-DD
 
 
 def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
@@ -89,6 +94,23 @@ def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
     if total_qcom == 0.0:
         raise ValueError("Required field qCom not found or zero in all <det> elements")
 
+    # Extract scheduled_date from infAdic/infCpl "Data OCR: DD MM YYYY"
+    scheduled_date = ""
+    inf_adic = inf_nfe.find("nfe:infAdic", NS)
+    if inf_adic is None:
+        inf_adic = inf_nfe.find("infAdic")
+        logger.info(f"Found infAdic: {inf_adic}")
+    if inf_adic is not None:
+        inf_cpl = _find_text_el(inf_adic, "infCpl")
+        logger.info(f"Found infCpl: {inf_cpl}")
+
+        if inf_cpl:
+            import re
+
+            m = re.search(r"Data OCR:\s*(\d{2})\s+(\d{2})\s+(\d{4})", inf_cpl)
+            if m:
+                scheduled_date = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+
     return ParsedNfe(
         fiscal_document_number=fiscal_document_number,
         issue_date=issue_date,
@@ -99,6 +121,7 @@ def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
         order_number=order_number,
         lot_number=lot_number,
         expiration_date=expiration_date,
+        scheduled_date=scheduled_date,
     )
 
 

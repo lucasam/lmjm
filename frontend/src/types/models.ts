@@ -73,6 +73,7 @@ export interface FeedTruckArrival {
   fiscal_document_number: string;
   actual_amount_kg: number;
   feed_type: string;
+  feed_description?: string;
   feed_schedule_id?: string;
 }
 
@@ -140,6 +141,7 @@ export interface FeedScheduleFiscalDocument {
   product_code: string;
   actual_amount_kg: number;
   issue_date: string;
+  planned_date?: string;
 }
 
 export interface MedicationShot {

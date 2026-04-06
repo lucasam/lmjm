@@ -88,34 +88,55 @@ def _find_batch_by_supply_id(order_number: str, batches: list[Batch]) -> Optiona
 
 def _match_feed_schedule(
     product_code: str,
-    issue_date_str: str,
     schedules: list[FeedSchedule],
-) -> Optional[str]:
-    """Attempt to match a single FeedSchedule by feed_type and date proximity.
+    scheduled_date_str: str = "",
+    already_matched_ids: set[str] | None = None,
+) -> tuple[Optional[str], str]:
+    """Match a FeedSchedule by feed_type and exact scheduled_date.
 
-    Returns the matched schedule's sk, or None if zero or multiple matches.
+    Only matches if scheduled_date_str is provided and equals a schedule's planned_date.
+    Excludes schedules whose sk is in already_matched_ids.
+    If multiple matches, returns the first and logs all.
+    Returns (matched schedule sk or None, planned_date or "").
     """
-    try:
-        issue_date = datetime.strptime(issue_date_str, "%Y-%m-%d")
-    except (ValueError, TypeError):
-        return None
+    if not scheduled_date_str:
+        logger.info("No scheduled_date (OCR), skipping schedule match for product_code=%s", product_code)
+        return None, ""
+
+    logger.info("Matching schedule: product_code=%s, scheduled_date=%s", product_code, scheduled_date_str)
+
+    excluded = already_matched_ids or set()
+    if excluded:
+        logger.info("Excluding already-matched schedule ids: %s", excluded)
 
     matches: list[FeedSchedule] = []
     for schedule in schedules:
         if schedule.feed_type != product_code:
             continue
         if schedule.status != "scheduled":
+            logger.info("  Skip %s: status=%s", schedule.sk, schedule.status)
             continue
-        try:
-            planned = datetime.strptime(schedule.planned_date, "%Y-%m-%d")
-        except (ValueError, TypeError):
+        if schedule.sk in excluded:
+            logger.info("  Skip %s: already matched", schedule.sk)
             continue
-        if abs((planned - issue_date).days) <= 7:
+        if schedule.planned_date == scheduled_date_str:
+            logger.info("  Match %s: planned_date=%s", schedule.sk, schedule.planned_date)
             matches.append(schedule)
 
-    if len(matches) == 1:
-        return matches[0].sk
-    return None
+    if len(matches) == 0:
+        logger.info("No matching schedule for product_code=%s date=%s", product_code, scheduled_date_str)
+        return None, ""
+
+    if len(matches) > 1:
+        logger.info(
+            "Multiple matches (%d), returning first: %s. All: %s",
+            len(matches),
+            matches[0].sk,
+            [m.sk for m in matches],
+        )
+
+    logger.info("Match found: %s (planned_date=%s)", matches[0].sk, matches[0].planned_date)
+    return matches[0].sk, matches[0].planned_date
 
 
 def _process_single_nfe(
@@ -169,10 +190,16 @@ def _process_single_nfe(
 def _handle_feed_product(parsed: ParsedNfe, batch_pk: str) -> None:
     """Create FeedScheduleFiscalDocument, optionally matching a FeedSchedule."""
     feed_schedule_id: Optional[str] = None
+    planned_date: str = ""
 
     if batch_pk != "UNMATCHED_FISCAL":
         schedules = feed_schedule_repo.list(batch_pk)
-        feed_schedule_id = _match_feed_schedule(parsed.product_code, parsed.issue_date, schedules)
+        # Exclude schedules already linked to a fiscal document
+        existing_fsfds = feed_schedule_fiscal_document_repo.list(batch_pk)
+        already_matched = {f.feed_schedule_id for f in existing_fsfds if f.feed_schedule_id}
+        feed_schedule_id, planned_date = _match_feed_schedule(
+            parsed.product_code, schedules, parsed.scheduled_date, already_matched
+        )
 
     fsfd = FeedScheduleFiscalDocument(
         pk=batch_pk,
@@ -183,12 +210,14 @@ def _handle_feed_product(parsed: ParsedNfe, batch_pk: str) -> None:
         product_code=parsed.product_code,
         actual_amount_kg=parsed.actual_amount_kg,
         issue_date=parsed.issue_date,
+        planned_date=planned_date,
     )
     feed_schedule_fiscal_document_repo.put(fsfd)
     logger.info(
-        "Created FeedScheduleFiscalDocument %s (feed_schedule_id=%s)",
+        "Created FeedScheduleFiscalDocument %s (feed_schedule_id=%s) batch %s",
         parsed.fiscal_document_number,
         feed_schedule_id,
+        batch_pk,
     )
 
 

@@ -15,3 +15,4 @@ class FeedScheduleFiscalDocument:
     product_code: str = ""
     actual_amount_kg: int = 0
     issue_date: str = ""
+    planned_date: str = ""

@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { postFeedTruckArrival } from '../../api/client';
-import { getFeedTypeDescription } from '../../constants/feedTypes';
 import type { FeedSchedule, FeedScheduleFiscalDocument, RawMaterialType } from '../../types/models';
 
 interface FeedTruckArrivalFormProps {
@@ -13,37 +12,50 @@ interface FeedTruckArrivalFormProps {
   onSuccess: () => void;
 }
 
-export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFiscalDocs, rawMaterialTypes, onClose, onSuccess }: FeedTruckArrivalFormProps) {
+export default function FeedTruckArrivalForm({
+  batchId,
+  feedSchedule,
+  pendingFiscalDocs,
+  rawMaterialTypes,
+  onClose,
+  onSuccess,
+}: FeedTruckArrivalFormProps) {
   const { t } = useTranslation();
   const [receiveDate, setReceiveDate] = useState('');
   const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState('');
   const [actualAmountKg, setActualAmountKg] = useState('');
   const [feedType, setFeedType] = useState('');
+  const [feedDescription, setFeedDescription] = useState('');
   const [feedScheduleId, setFeedScheduleId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const pendingSchedule = feedSchedule.filter((s) => !s.fulfilled_by);
+  const feedRawMaterials = useMemo(
+    () => (rawMaterialTypes ?? []).filter((r) => r.category === 'feed'),
+    [rawMaterialTypes],
+  );
+
+  const pendingSchedule = feedSchedule
+    .filter((s) => !s.fulfilled_by)
+    .sort((a, b) => a.planned_date.localeCompare(b.planned_date));
   const pendingDocs = (pendingFiscalDocs ?? []).filter((d) => d.status === 'pending');
+
+  const selectRawMaterial = (code: string) => {
+    setFeedType(code);
+    const rmt = feedRawMaterials.find((r) => r.code === code);
+    setFeedDescription(rmt ? rmt.description : '');
+  };
 
   const handleFiscalDocSelect = (fiscalDocNumber: string) => {
     if (!fiscalDocNumber) return;
     const doc = pendingDocs.find((d) => d.fiscal_document_number === fiscalDocNumber);
     if (!doc) return;
-
-    // Convert issue_date YYYY-MM-DD to YYYY-MM-DD (already correct format for date input)
     setReceiveDate(doc.issue_date);
     setFiscalDocumentNumber(doc.fiscal_document_number);
     setActualAmountKg(String(doc.actual_amount_kg));
-
-    // Map product_code to feed type code via RawMaterialType
-    setFeedType(doc.product_code);
-
-    // Pre-fill feed_schedule_id if present
-    if (doc.feed_schedule_id) {
-      setFeedScheduleId(doc.feed_schedule_id);
-    }
+    selectRawMaterial(doc.product_code);
+    setFeedScheduleId(doc.feed_schedule_id ?? '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +68,7 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
         fiscal_document_number: fiscalDocumentNumber,
         actual_amount_kg: Number(actualAmountKg),
         feed_type: feedType,
+        feed_description: feedDescription,
         ...(feedScheduleId ? { feed_schedule_id: feedScheduleId } : {}),
       });
       setSuccess(true);
@@ -65,6 +78,11 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const scheduleLabel = (s: FeedSchedule) => {
+    const desc = s.feed_description || feedRawMaterials.find((r) => r.code === s.feed_type)?.description || s.feed_type;
+    return `${desc} — ${s.planned_date} (${s.expected_amount_kg} kg)`;
   };
 
   return (
@@ -78,18 +96,14 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
         {pendingDocs.length > 0 && (
           <label className="form-label">
             Preencher com NF-e
-            <select
-              onChange={(e) => handleFiscalDocSelect(e.target.value)}
-              className="form-input"
-              defaultValue=""
-            >
+            <select onChange={(e) => handleFiscalDocSelect(e.target.value)} className="form-input" defaultValue="">
               <option value="">—</option>
               {pendingDocs.map((d) => {
-                const rmt = (rawMaterialTypes ?? []).find((r) => r.code === d.product_code);
-                const feedDesc = rmt ? rmt.description : d.product_code;
+                const rmt = feedRawMaterials.find((r) => r.code === d.product_code);
+                const desc = rmt ? rmt.description : d.product_code;
                 return (
                   <option key={d.fiscal_document_number} value={d.fiscal_document_number}>
-                    NF {d.fiscal_document_number} — {feedDesc} — {d.actual_amount_kg} kg ({d.issue_date})
+                    NF {d.fiscal_document_number} — {desc} — {d.actual_amount_kg} kg ({d.issue_date})
                   </option>
                 );
               })}
@@ -110,14 +124,14 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
 
           <label className="form-label">
             {t('pigs.actualAmountKg')} *
-            <input type="number" required min="0" step="any" value={actualAmountKg} onChange={(e) => setActualAmountKg(e.target.value)} className="form-input" />
+            <input type="number" required min="0" step="1" value={actualAmountKg} onChange={(e) => setActualAmountKg(e.target.value)} className="form-input" />
           </label>
 
           <label className="form-label">
             {t('pigs.feedType')} *
-            <select required value={feedType} onChange={(e) => setFeedType(e.target.value)} className="form-input">
+            <select required value={feedType} onChange={(e) => selectRawMaterial(e.target.value)} className="form-input">
               <option value="">—</option>
-              {(rawMaterialTypes ?? []).filter((r) => r.category === 'feed').map((r) => (
+              {feedRawMaterials.map((r) => (
                 <option key={r.code} value={r.code}>{r.description} ({r.code})</option>
               ))}
             </select>
@@ -129,7 +143,7 @@ export default function FeedTruckArrivalForm({ batchId, feedSchedule, pendingFis
               <select value={feedScheduleId} onChange={(e) => setFeedScheduleId(e.target.value)} className="form-input">
                 <option value="">—</option>
                 {pendingSchedule.map((s) => (
-                  <option key={s.sk} value={s.sk}>{getFeedTypeDescription(s.feed_type)} — {s.planned_date} ({s.expected_amount_kg} kg)</option>
+                  <option key={s.sk} value={s.sk}>{scheduleLabel(s)}</option>
                 ))}
               </select>
             </label>

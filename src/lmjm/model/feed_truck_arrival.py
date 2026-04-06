@@ -13,4 +13,5 @@ class FeedTruckArrival:
     fiscal_document_number: str = ""
     actual_amount_kg: int = 0
     feed_type: str = ""
+    feed_description: str = ""
     feed_schedule_id: Optional[str] = None
