@@ -198,7 +198,7 @@ def test_post_feed_truck_arrival_returns_201_on_success() -> None:
 
     assert result["statusCode"] == 201
     body = json.loads(result["body"])
-    assert body["receive_date"] == "2025-01-15"
+    assert body["receive_date"] == "2025-01-15T00:00"
     assert body["feed_type"] == "starter"
 
 
@@ -718,7 +718,7 @@ def test_post_feed_balance_returns_201_on_success() -> None:
 
     assert result["statusCode"] == 201
     body = json.loads(result["body"])
-    assert body["measurement_date"] == "2025-03-15"
+    assert body["measurement_date"] == "2025-03-15T00:00"
     assert body["balance_kg"] == 5000.0
 
 

@@ -2,7 +2,6 @@ import dataclasses
 import json
 import os
 import uuid
-from datetime import datetime
 from typing import Any, Optional
 from urllib.parse import unquote
 
@@ -10,6 +9,7 @@ import boto3
 
 from lmjm.model import FeedTruckArrival
 from lmjm.repo import BatchRepo, FeedScheduleFiscalDocumentRepo, FeedScheduleRepo, FeedTruckArrivalRepo
+from lmjm.util.datetime_util import parse_datetime_input
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
 
@@ -43,10 +43,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     # Validate receive_date
     try:
-        parsed_date = datetime.strptime(request.receive_date, "%Y%m%d")
-        receive_date_stored = parsed_date.strftime("%Y-%m-%d")
+        receive_date_stored, sk_date_part = parse_datetime_input(request.receive_date)
     except (ValueError, TypeError):
-        return respond(status_code=400, error="receive_date must be in YYYYMMDD format")
+        return respond(status_code=400, error="receive_date must be in YYYYMMDDHHmm or YYYYMMDD format")
 
     # Validate fiscal_document_number
     if not request.fiscal_document_number or not request.fiscal_document_number.strip():
@@ -68,11 +67,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             return respond(status_code=404, error="FeedSchedule not found")
 
     sequence = str(uuid.uuid4())
-    date_str = parsed_date.strftime("%Y%m%d")
 
     arrival = FeedTruckArrival(
         pk=batch_id,
-        sk=f"FeedTruckArrival|{date_str}|{sequence}",
+        sk=f"FeedTruckArrival|{sk_date_part}|{sequence}",
         receive_date=receive_date_stored,
         fiscal_document_number=request.fiscal_document_number,
         actual_amount_kg=request.actual_amount_kg,

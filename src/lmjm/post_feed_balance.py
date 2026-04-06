@@ -1,7 +1,6 @@
 import dataclasses
 import json
 import os
-from datetime import datetime
 from typing import Any
 from urllib.parse import unquote
 
@@ -9,6 +8,7 @@ import boto3
 
 from lmjm.model import FeedBalance
 from lmjm.repo import BatchRepo, FeedBalanceRepo
+from lmjm.util.datetime_util import parse_datetime_input
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
 
@@ -37,20 +37,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     # Validate measurement_date
     try:
-        parsed_date = datetime.strptime(request.measurement_date, "%Y%m%d")
-        measurement_date_stored = parsed_date.strftime("%Y-%m-%d")
+        measurement_date_stored, sk_date_part = parse_datetime_input(request.measurement_date)
     except (ValueError, TypeError):
-        return respond(status_code=400, error="measurement_date must be in YYYYMMDD format")
+        return respond(status_code=400, error="measurement_date must be in YYYYMMDDHHmm or YYYYMMDD format")
 
     # Validate balance_kg non-negative
     if request.balance_kg < 0:
         return respond(status_code=400, error="balance_kg must be non-negative")
 
-    date_str = parsed_date.strftime("%Y%m%d")
-
     feed_balance = FeedBalance(
         pk=batch_id,
-        sk=f"FeedBalance|{date_str}",
+        sk=f"FeedBalance|{sk_date_part}",
         measurement_date=measurement_date_stored,
         balance_kg=request.balance_kg,
     )

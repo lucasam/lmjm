@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { postFeedBalance } from '../../api/client';
+import { datetimeLocalToApi, currentDatetimeLocal } from '../../utils/datetimeConvert';
 
 interface FeedBalanceFormProps {
   batchId: string;
@@ -10,7 +11,7 @@ interface FeedBalanceFormProps {
 
 export default function FeedBalanceForm({ batchId, onClose, onSuccess }: FeedBalanceFormProps) {
   const { t } = useTranslation();
-  const [measurementDate, setMeasurementDate] = useState('');
+  const [measurementDate, setMeasurementDate] = useState(currentDatetimeLocal());
   const [balanceKg, setBalanceKg] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export default function FeedBalanceForm({ batchId, onClose, onSuccess }: FeedBal
     setError(null);
     try {
       await postFeedBalance(batchId, {
-        measurement_date: measurementDate.replace(/-/g, ''),
+        measurement_date: datetimeLocalToApi(measurementDate),
         balance_kg: Number(balanceKg),
       });
       setSuccess(true);
@@ -44,8 +45,8 @@ export default function FeedBalanceForm({ batchId, onClose, onSuccess }: FeedBal
 
         <form onSubmit={handleSubmit}>
           <label className="form-label">
-            {t('pigs.measurementDate')} *
-            <input type="date" required value={measurementDate} onChange={(e) => setMeasurementDate(e.target.value)} className="form-input" />
+            {t('pigs.measurementDateTime')} *
+            <input type="datetime-local" required value={measurementDate} onChange={(e) => setMeasurementDate(e.target.value)} className="form-input" />
           </label>
 
           <label className="form-label">

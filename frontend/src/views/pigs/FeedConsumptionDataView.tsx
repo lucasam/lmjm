@@ -41,6 +41,29 @@ function getCumulativeDeathsUpTo(mortalities: Mortality[], dateStr: string): num
   return count;
 }
 
+/**
+ * Filter arrivals whose receive_date falls in the half-open interval (prevDatetime, currDatetime]
+ * using full datetime string comparison (lexicographic on YYYY-MM-DDTHH:MM).
+ */
+export function filterArrivalsInPeriod(
+  arrivals: FeedTruckArrival[],
+  prevDatetime: string,
+  currDatetime: string,
+): FeedTruckArrival[] {
+  return arrivals.filter(a => a.receive_date > prevDatetime && a.receive_date <= currDatetime);
+}
+
+/**
+ * Compute the number of whole calendar days between two datetime strings.
+ * Extracts the date portion only (YYYY-MM-DD via substring(0,10)) so that
+ * the time component does not affect the result.
+ */
+export function computePeriodDays(prevDatetime: string, currDatetime: string): number {
+  const d1 = new Date(prevDatetime.substring(0, 10) + 'T00:00:00');
+  const d2 = new Date(currDatetime.substring(0, 10) + 'T00:00:00');
+  return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86400000));
+}
+
 function computeConsumptionData(
   batch: Batch,
   balances: FeedBalance[],
@@ -65,29 +88,32 @@ function computeConsumptionData(
     const prev = sortedBalances[i - 1];
     const curr = sortedBalances[i];
 
-    const prevDate = prev.measurement_date;
-    const currDate = curr.measurement_date;
+    const prevDatetime = prev.measurement_date;
+    const currDatetime = curr.measurement_date;
 
+    // Arrival attribution uses full datetime string comparison
+    const periodArrivals = filterArrivalsInPeriod(arrivals, prevDatetime, currDatetime);
     let deliveredInPeriod = 0;
-    for (const a of arrivals) {
-      if (a.receive_date > prevDate && a.receive_date <= currDate) {
-        deliveredInPeriod += a.actual_amount_kg;
-      }
+    for (const a of periodArrivals) {
+      deliveredInPeriod += a.actual_amount_kg;
     }
 
     const totalConsumed = prev.balance_kg + deliveredInPeriod - curr.balance_kg;
 
-    const d1 = new Date(prevDate + 'T00:00:00');
-    const d2 = new Date(currDate + 'T00:00:00');
-    const days = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86400000));
+    // Period days uses date portion only (ignores time component)
+    const days = computePeriodDays(prevDatetime, currDatetime);
 
-    const deaths = getCumulativeDeathsUpTo(mortalities, currDate);
+    const deaths = getCumulativeDeathsUpTo(mortalities, currDatetime);
     const liveAnimals = Math.max(1, totalAnimals - deaths);
 
     const consumptionPerPig = totalConsumed / liveAnimals;
     const dailyPerAnimal = totalConsumed / (liveAnimals * days);
 
-    const recDate = new Date(receiveDate + 'T00:00:00');
+    const prevDateOnly = prevDatetime.substring(0, 10);
+    const currDateOnly = currDatetime.substring(0, 10);
+    const d1 = new Date(prevDateOnly + 'T00:00:00');
+    const d2 = new Date(currDateOnly + 'T00:00:00');
+    const recDate = new Date(receiveDate.substring(0, 10) + 'T00:00:00');
     const dayStart = Math.floor((d1.getTime() - recDate.getTime()) / 86400000) + 1;
     const dayEnd = Math.floor((d2.getTime() - recDate.getTime()) / 86400000);
     let plannedSum = 0;
@@ -101,8 +127,8 @@ function computeConsumptionData(
     const plannedDailyPerAnimal = plannedCount > 0 ? plannedSum / plannedCount : null;
 
     rows.push({
-      periodStart: prevDate,
-      periodEnd: currDate,
+      periodStart: prevDatetime,
+      periodEnd: currDatetime,
       days,
       totalConsumed,
       liveAnimals,

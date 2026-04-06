@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { postFeedTruckArrival } from '../../api/client';
 import type { FeedSchedule, FeedScheduleFiscalDocument, RawMaterialType } from '../../types/models';
+import { datetimeLocalToApi, currentDatetimeLocal } from '../../utils/datetimeConvert';
 
 interface FeedTruckArrivalFormProps {
   batchId: string;
@@ -21,7 +22,7 @@ export default function FeedTruckArrivalForm({
   onSuccess,
 }: FeedTruckArrivalFormProps) {
   const { t } = useTranslation();
-  const [receiveDate, setReceiveDate] = useState('');
+  const [receiveDate, setReceiveDate] = useState(currentDatetimeLocal());
   const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState('');
   const [actualAmountKg, setActualAmountKg] = useState('');
   const [feedType, setFeedType] = useState('');
@@ -51,7 +52,7 @@ export default function FeedTruckArrivalForm({
     if (!fiscalDocNumber) return;
     const doc = pendingDocs.find((d) => d.fiscal_document_number === fiscalDocNumber);
     if (!doc) return;
-    setReceiveDate(doc.issue_date);
+    setReceiveDate(`${doc.issue_date}T00:00`);
     setFiscalDocumentNumber(doc.fiscal_document_number);
     setActualAmountKg(String(doc.actual_amount_kg));
     selectRawMaterial(doc.product_code);
@@ -64,7 +65,7 @@ export default function FeedTruckArrivalForm({
     setError(null);
     try {
       await postFeedTruckArrival(batchId, {
-        receive_date: receiveDate.replace(/-/g, ''),
+        receive_date: datetimeLocalToApi(receiveDate),
         fiscal_document_number: fiscalDocumentNumber,
         actual_amount_kg: Number(actualAmountKg),
         feed_type: feedType,
@@ -113,8 +114,8 @@ export default function FeedTruckArrivalForm({
 
         <form onSubmit={handleSubmit}>
           <label className="form-label">
-            {t('pigs.receiveDate')} *
-            <input type="date" required value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} className="form-input" />
+            {t('pigs.receiveDateTime')} *
+            <input type="datetime-local" required value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} className="form-input" />
           </label>
 
           <label className="form-label">

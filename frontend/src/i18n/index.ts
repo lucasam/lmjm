@@ -24,14 +24,22 @@ i18n
   });
 
 /**
- * Format a Date or ISO date string to DD/MM/YYYY (pt-BR convention).
- * For date-only strings (YYYY-MM-DD), parses manually to avoid timezone shift.
+ * Format a Date or ISO date/datetime string to pt-BR convention.
+ * - Datetime strings (YYYY-MM-DDTHH:MM) → DD/MM/YYYY HH:MM
+ * - Date-only strings (YYYY-MM-DD) → DD/MM/YYYY (legacy)
+ * - Date objects → DD/MM/YYYY via toLocaleDateString
  */
 export function formatDate(value: Date | string): string {
   if (typeof value === 'string') {
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (match) {
-      return `${match[3]}/${match[2]}/${match[1]}`;
+    // Datetime: YYYY-MM-DDTHH:MM
+    const dtMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    if (dtMatch) {
+      return `${dtMatch[3]}/${dtMatch[2]}/${dtMatch[1]} ${dtMatch[4]}:${dtMatch[5]}`;
+    }
+    // Date-only: YYYY-MM-DD (legacy)
+    const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateMatch) {
+      return `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}`;
     }
   }
   const date = typeof value === 'string' ? new Date(value) : value;
