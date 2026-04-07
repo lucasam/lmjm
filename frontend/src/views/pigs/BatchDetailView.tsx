@@ -144,7 +144,7 @@ export default function BatchDetailView() {
 
   const feedTruckCols: Column<FeedTruckArrival>[] = [
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
-    { header: t('pigs.feedType'), accessor: (r) => getFeedTypeDescription(r.feed_type) },
+    { header: t('pigs.feedType'), accessor: (r) => r.feed_description || getFeedTypeDescription(r.feed_type) },
     { header: t('pigs.actualAmountKg'), accessor: (r) => formatNumber(r.actual_amount_kg) },
     { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
   ];
