@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Optional
 from urllib.parse import unquote
 
@@ -30,7 +31,7 @@ class PostPigTruckArrivalRequest:
     origin_name: str
     origin_type: str
     fiscal_document_number: str = ""
-    animal_weight: int = 0
+    animal_weight: Decimal = Decimal(0)
     gta_number: str = ""
     mossa: str = ""
     suplier_code: Optional[int] = None

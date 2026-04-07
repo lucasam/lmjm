@@ -1,5 +1,6 @@
 import os
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 from urllib.parse import unquote
 
@@ -44,11 +45,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     distinct_origin_count: int = len(origin_names)
     origin_types: list[str] = sorted({a.origin_type for a in arrivals})
 
+    # Compute initial_animal_weight (weighted average by animal_count)
+    total_weight: Decimal = sum((a.animal_weight * a.animal_count for a in arrivals), Decimal(0))
+    initial_animal_weight: Decimal = (total_weight / total_animal_count).quantize(Decimal("0.01")) if total_animal_count > 0 else Decimal(0)
+
     # Update batch
     batch.total_animal_count = total_animal_count
     batch.average_start_date = average_start_date
     batch.distinct_origin_count = distinct_origin_count
     batch.origin_types = origin_types
+    batch.initial_animal_weight = initial_animal_weight
     batch.status = "in_progress"
     batch_repo.update(batch)
 

@@ -1,5 +1,12 @@
 import json
+from decimal import Decimal
 from typing import Any, Optional
+
+
+def _default_serializer(obj: Any) -> Any:
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def respond(
@@ -11,7 +18,7 @@ def respond(
     if error:
         payload = json.dumps({"message": error})
     elif body is not None:
-        payload = json.dumps(body)
+        payload = json.dumps(body, default=_default_serializer)
     else:
         payload = json.dumps({})
 

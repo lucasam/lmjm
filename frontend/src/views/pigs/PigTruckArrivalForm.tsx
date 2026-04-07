@@ -1,26 +1,29 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { postPigTruckArrival } from '../../api/client';
+import { postPigTruckArrival, updatePigTruckArrival } from '../../api/client';
+import type { PigTruckArrival } from '../../types/models';
 
 interface PigTruckArrivalFormProps {
   batchId: string;
+  initial?: PigTruckArrival;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: PigTruckArrivalFormProps) {
+export default function PigTruckArrivalForm({ batchId, initial, onClose, onSuccess }: PigTruckArrivalFormProps) {
   const { t } = useTranslation();
-  const [animalCount, setAnimalCount] = useState('');
-  const [sex, setSex] = useState<'Male' | 'Female'>('Male');
-  const [arrivalDate, setArrivalDate] = useState('');
-  const [pigAgeDays, setPigAgeDays] = useState('');
-  const [originName, setOriginName] = useState('');
-  const [originType, setOriginType] = useState<'UPL' | 'Creche'>('UPL');
-  const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState('');
-  const [animalWeight, setAnimalWeight] = useState('');
-  const [gtaNumber, setGtaNumber] = useState('');
-  const [mossa, setMossa] = useState('');
-  const [suplierCode, setSuplierCode] = useState('');
+  const isEdit = !!initial;
+  const [animalCount, setAnimalCount] = useState(initial ? String(initial.animal_count) : '');
+  const [sex, setSex] = useState<'Male' | 'Female'>(initial?.sex === 'Female' ? 'Female' : 'Male');
+  const [arrivalDate, setArrivalDate] = useState(initial?.arrival_date ?? '');
+  const [pigAgeDays, setPigAgeDays] = useState(initial ? String(initial.pig_age_days) : '');
+  const [originName, setOriginName] = useState(initial?.origin_name ?? '');
+  const [originType, setOriginType] = useState<'UPL' | 'Creche'>(initial?.origin_type === 'Creche' ? 'Creche' : 'UPL');
+  const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState(initial?.fiscal_document_number ?? '');
+  const [animalWeight, setAnimalWeight] = useState(initial?.animal_weight != null ? String(initial.animal_weight) : '');
+  const [gtaNumber, setGtaNumber] = useState(initial?.gta_number ?? '');
+  const [mossa, setMossa] = useState(initial?.mossa ?? '');
+  const [suplierCode, setSuplierCode] = useState(initial?.suplier_code != null ? String(initial.suplier_code) : '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -30,19 +33,34 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
     setSubmitting(true);
     setError(null);
     try {
-      await postPigTruckArrival(batchId, {
-        animal_count: Number(animalCount),
-        sex,
-        arrival_date: arrivalDate.replace(/-/g, ''),
-        pig_age_days: Number(pigAgeDays),
-        origin_name: originName,
-        origin_type: originType,
-        ...(fiscalDocumentNumber ? { fiscal_document_number: fiscalDocumentNumber } : {}),
-        ...(animalWeight ? { animal_weight: Number(animalWeight) } : {}),
-        ...(gtaNumber ? { gta_number: gtaNumber } : {}),
-        ...(mossa ? { mossa } : {}),
-        ...(suplierCode ? { suplier_code: Number(suplierCode) } : {}),
-      });
+      if (isEdit) {
+        await updatePigTruckArrival(batchId, initial.sk, {
+          animal_count: Number(animalCount),
+          sex,
+          pig_age_days: Number(pigAgeDays),
+          origin_name: originName,
+          origin_type: originType,
+          fiscal_document_number: fiscalDocumentNumber,
+          animal_weight: animalWeight ? Number(animalWeight) : undefined,
+          gta_number: gtaNumber,
+          mossa,
+          suplier_code: suplierCode ? Number(suplierCode) : undefined,
+        });
+      } else {
+        await postPigTruckArrival(batchId, {
+          animal_count: Number(animalCount),
+          sex,
+          arrival_date: arrivalDate.replace(/-/g, ''),
+          pig_age_days: Number(pigAgeDays),
+          origin_name: originName,
+          origin_type: originType,
+          ...(fiscalDocumentNumber ? { fiscal_document_number: fiscalDocumentNumber } : {}),
+          ...(animalWeight ? { animal_weight: Number(animalWeight) } : {}),
+          ...(gtaNumber ? { gta_number: gtaNumber } : {}),
+          ...(mossa ? { mossa } : {}),
+          ...(suplierCode ? { suplier_code: Number(suplierCode) } : {}),
+        });
+      }
       setSuccess(true);
       setTimeout(onSuccess, 800);
     } catch (err) {
@@ -55,7 +73,7 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">{t('pigs.newPigTruckArrival')}</h2>
+        <h2 className="modal-title">{isEdit ? t('common.edit') : t('pigs.newPigTruckArrival')}</h2>
 
         {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
         {error && <div className="alert alert-error">{error}</div>}
@@ -74,10 +92,12 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
             </select>
           </label>
 
-          <label className="form-label">
-            {t('pigs.arrivalDate')} *
-            <input type="date" required value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} className="form-input" />
-          </label>
+          {!isEdit && (
+            <label className="form-label">
+              {t('pigs.arrivalDate')} *
+              <input type="date" required value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} className="form-input" />
+            </label>
+          )}
 
           <label className="form-label">
             {t('pigs.pigAgeDays')} *
@@ -104,7 +124,7 @@ export default function PigTruckArrivalForm({ batchId, onClose, onSuccess }: Pig
 
           <label className="form-label">
             {t('pigs.animalWeight')}
-            <input type="number" min="0" step="1" value={animalWeight} onChange={(e) => setAnimalWeight(e.target.value)} className="form-input" />
+            <input type="number" min="0" step="any" value={animalWeight} onChange={(e) => setAnimalWeight(e.target.value)} className="form-input" />
           </label>
 
           <label className="form-label">

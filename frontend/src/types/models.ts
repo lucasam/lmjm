@@ -53,6 +53,7 @@ export interface Batch {
   average_start_date?: string;
   distinct_origin_count?: number;
   origin_types?: string[];
+  initial_animal_weight?: number;
 }
 
 export interface FeedSchedule {

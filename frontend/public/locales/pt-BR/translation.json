@@ -116,6 +116,7 @@
     "averageStartDate": "Data Média de Início",
     "distinctOriginCount": "Origens Distintas",
     "originTypes": "Tipos de Origem",
+    "initialAnimalWeight": "Peso Médio Inicial (kg)",
     "mortalities": "Mortalidades",
     "newMortality": "Nova Mortalidade",
     "mortalityDate": "Data da Mortalidade",

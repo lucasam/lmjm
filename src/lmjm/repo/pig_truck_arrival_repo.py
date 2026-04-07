@@ -24,3 +24,6 @@ class PigTruckArrivalRepo:
             ScanIndexForward=True,
         )
         return load_data_class_from_dict_list(response["Items"], PigTruckArrival)
+
+    def update(self, arrival: PigTruckArrival) -> None:
+        self.table.put_item(Item=serialize_to_dict(arrival))

@@ -1,4 +1,5 @@
 import dataclasses
+from decimal import Decimal
 from typing import Optional
 
 from lmjm.util.marshmallow_serializer import serialization_config
@@ -19,3 +20,4 @@ class Batch:
     average_start_date: Optional[str] = None
     distinct_origin_count: Optional[int] = None
     origin_types: Optional[list[str]] = None
+    initial_animal_weight: Optional[Decimal] = None

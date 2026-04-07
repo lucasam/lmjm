@@ -44,6 +44,7 @@ type ModalType =
   | 'feedTruck'
   | 'feedSchedule'
   | 'pigTruck'
+  | 'editPigTruck'
   | 'mortality'
   | 'medication'
   | 'medicationShot'
@@ -58,6 +59,7 @@ export default function BatchDetailView() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [modal, setModal] = useState<ModalType>(null);
+  const [editPigTruckArrival, setEditPigTruckArrival] = useState<PigTruckArrival | null>(null);
   const [triggeringStart, setTriggeringStart] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [scheduleFilter, setScheduleFilter] = useState<string>('all');
@@ -150,11 +152,26 @@ export default function BatchDetailView() {
   const pigTruckCols: Column<PigTruckArrival>[] = [
     { header: t('pigs.arrivalDate'), accessor: (r) => formatDate(r.arrival_date) },
     { header: t('pigs.animalCount'), accessor: (r) => String(r.animal_count) },
+    { header: t('pigs.animalWeight'), accessor: (r) => r.animal_weight ? formatNumber(r.animal_weight, 2) : '—' },
     { header: t('cattle.sex'), accessor: (r) => r.sex === 'Male' ? t('pigs.male') : t('pigs.female') },
     { header: t('pigs.originName'), accessor: (r) => r.origin_name },
     { header: t('pigs.originType'), accessor: (r) => r.origin_type === 'UPL' ? t('pigs.upl') : t('pigs.creche') },
     { header: t('pigs.pigAgeDays'), accessor: (r) => String(r.pig_age_days) },
+    { header: '', accessor: (r) => (
+      <button type="button" className="btn btn-outline btn-sm" onClick={() => { setEditPigTruckArrival(r); setModal('editPigTruck'); }}>
+        {t('common.edit')}
+      </button>
+    )},
   ];
+
+  const pigTruckSummary = useMemo(() => {
+    const data = pigTrucks ?? [];
+    if (data.length === 0) return null;
+    const totalAnimals = data.reduce((sum, a) => sum + a.animal_count, 0);
+    const totalWeight = data.reduce((sum, a) => sum + (a.animal_weight ?? 0) * a.animal_count, 0);
+    const weightedAvg = totalAnimals > 0 ? totalWeight / totalAnimals : 0;
+    return { totalAnimals, weightedAvg };
+  }, [pigTrucks]);
 
   const mortalityCols: Column<Mortality>[] = [
     { header: t('pigs.mortalityDate'), accessor: (r) => formatDate(r.mortality_date) },
@@ -221,6 +238,7 @@ export default function BatchDetailView() {
                 <DetailRow label={t('pigs.averageStartDate')} value={batch.average_start_date ? formatDate(batch.average_start_date) : undefined} />
                 <DetailRow label={t('pigs.distinctOriginCount')} value={batch.distinct_origin_count != null ? String(batch.distinct_origin_count) : undefined} />
                 <DetailRow label={t('pigs.originTypes')} value={batch.origin_types?.join(', ')} />
+                <DetailRow label={t('pigs.initialAnimalWeight')} value={batch.initial_animal_weight != null ? formatNumber(batch.initial_animal_weight, 2) : undefined} />
               </div>
             </>
           )}
@@ -261,6 +279,12 @@ export default function BatchDetailView() {
           {/* Pig truck arrivals */}
           <h2 className="section-title">{t('pigs.pigTruckArrivals')}</h2>
           <DataTable columns={pigTruckCols} data={pigTrucks ?? []} keyExtractor={(r) => r.sk} />
+          {pigTruckSummary && (
+            <div className="detail-grid" style={{ marginTop: '0.5rem' }}>
+              <DetailRow label={t('pigs.totalAnimalCount')} value={String(pigTruckSummary.totalAnimals)} />
+              <DetailRow label={t('pigs.animalWeight')} value={formatNumber(pigTruckSummary.weightedAvg, 2)} />
+            </div>
+          )}
 
           {/* Mortalities */}
           <h2 className="section-title">{t('pigs.mortalities')}</h2>
@@ -294,6 +318,9 @@ export default function BatchDetailView() {
       )}
       {modal === 'pigTruck' && (
         <PigTruckArrivalForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rPigTrucks)} />
+      )}
+      {modal === 'editPigTruck' && editPigTruckArrival && (
+        <PigTruckArrivalForm batchId={id} initial={editPigTruckArrival} onClose={() => { setModal(null); setEditPigTruckArrival(null); }} onSuccess={() => { setModal(null); setEditPigTruckArrival(null); rPigTrucks(); }} />
       )}
       {modal === 'mortality' && (
         <MortalityForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rMortalities)} />

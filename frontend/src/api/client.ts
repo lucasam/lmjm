@@ -318,6 +318,23 @@ export function listPigTruckArrivals(batchId: string): Promise<PigTruckArrival[]
   return get<PigTruckArrival[]>(`/pigs/batches/${encodeURIComponent(batchId)}/pig-truck-arrivals`);
 }
 
+export interface UpdatePigTruckArrivalRequest {
+  animal_count?: number;
+  sex?: 'Male' | 'Female';
+  pig_age_days?: number;
+  origin_name?: string;
+  origin_type?: 'UPL' | 'Creche';
+  fiscal_document_number?: string;
+  animal_weight?: number;
+  gta_number?: string;
+  mossa?: string;
+  suplier_code?: number;
+}
+
+export function updatePigTruckArrival(batchId: string, arrivalSk: string, data: UpdatePigTruckArrivalRequest): Promise<void> {
+  return put(`/pigs/batches/${encodeURIComponent(batchId)}/pig-truck-arrivals/${encodeURIComponent(arrivalSk)}`, data);
+}
+
 export function createBatchStartSummary(batchId: string): Promise<void> {
   return post(`/pigs/batches/${encodeURIComponent(batchId)}/start-summary`);
 }

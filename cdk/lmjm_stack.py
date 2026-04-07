@@ -614,6 +614,18 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_pig_truck_arrivals)
 
+        put_pig_truck_arrival = _lambda.Function(
+            self,
+            "PutPigTruckArrivalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.put_pig_truck_arrival.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_pig_truck_arrival)
+
         # --- Batch Start Summary Lambda ---
 
         post_batch_start_summary = _lambda.Function(
@@ -872,6 +884,10 @@ class LmjmStack(Stack):
         pig_truck_arrivals_resource = batch_resource.add_resource("pig-truck-arrivals")
         add_cognito_method(pig_truck_arrivals_resource, "POST", apigw.LambdaIntegration(post_pig_truck_arrival))
         add_cognito_method(pig_truck_arrivals_resource, "GET", apigw.LambdaIntegration(get_pig_truck_arrivals))
+
+        # /pigs/batches/{batch_id}/pig-truck-arrivals/{arrival_sk}
+        pig_truck_arrival_resource = pig_truck_arrivals_resource.add_resource("{arrival_sk}")
+        add_cognito_method(pig_truck_arrival_resource, "PUT", apigw.LambdaIntegration(put_pig_truck_arrival))
 
         # /pigs/batches/{batch_id}/start-summary
         start_summary_resource = batch_resource.add_resource("start-summary")
