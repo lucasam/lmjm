@@ -24,7 +24,6 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import DataTable, { type Column } from '../../components/DataTable';
 import FeedTruckArrivalForm from './FeedTruckArrivalForm';
-import FeedScheduleForm from './FeedScheduleForm';
 import PigTruckArrivalForm from './PigTruckArrivalForm';
 import MortalityForm from './MortalityForm';
 import MedicationForm from './MedicationForm';
@@ -42,7 +41,6 @@ import type {
 
 type ModalType =
   | 'feedTruck'
-  | 'feedSchedule'
   | 'pigTruck'
   | 'editPigTruck'
   | 'mortality'
@@ -62,7 +60,6 @@ export default function BatchDetailView() {
   const [editPigTruckArrival, setEditPigTruckArrival] = useState<PigTruckArrival | null>(null);
   const [triggeringStart, setTriggeringStart] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-  const [scheduleFilter, setScheduleFilter] = useState<string>('all');
 
   const id = batchId ?? '';
 
@@ -128,16 +125,32 @@ export default function BatchDetailView() {
     return map[s] ?? s;
   };
 
-  const sortedSchedule = useMemo(() => {
+  const PT_WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const filteredSchedule = useMemo(() => {
     const all = schedule ?? [];
-    const sorted = [...all].sort((a, b) => a.planned_date.localeCompare(b.planned_date));
-    if (scheduleFilter === 'all') return sorted;
-    return sorted.filter((s) => s.status === scheduleFilter);
-  }, [schedule, scheduleFilter]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const pastLimit = new Date(today);
+    pastLimit.setDate(pastLimit.getDate() - 5);
+    const futureLimit = new Date(today);
+    futureLimit.setDate(futureLimit.getDate() + 10);
+    const pastStr = pastLimit.toISOString().substring(0, 10);
+    const futureStr = futureLimit.toISOString().substring(0, 10);
+    return [...all]
+      .filter((s) => s.planned_date >= pastStr && s.planned_date <= futureStr)
+      .sort((a, b) => a.planned_date.localeCompare(b.planned_date));
+  }, [schedule]);
+
+  const formatDateWithWeekday = (dateStr: string): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const weekday = PT_WEEKDAYS[d.getDay()];
+    return `${formatDate(dateStr)} (${weekday})`;
+  };
 
   const scheduleCols: Column<FeedSchedule>[] = [
+    { header: t('pigs.plannedDate'), accessor: (r) => formatDateWithWeekday(r.planned_date) },
     { header: t('pigs.feedType'), accessor: (r) => getFeedTypeDescription(r.feed_type) },
-    { header: t('pigs.plannedDate'), accessor: (r) => formatDate(r.planned_date) },
     { header: t('pigs.expectedAmountKg'), accessor: (r) => formatNumber(r.expected_amount_kg) },
     { header: t('pigs.status'), accessor: (r) => translateScheduleStatus(r.status ?? 'scheduled') },
   ];
@@ -272,15 +285,12 @@ export default function BatchDetailView() {
 
           {/* Feed schedule */}
           <h2 className="section-title">{t('pigs.feedSchedule')}</h2>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <select value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)} className="filter-select">
-              <option value="all">{t('common.all', 'Todos')}</option>
-              <option value="scheduled">{t('pigs.feedScheduleStatusScheduled', 'Agendado')}</option>
-              <option value="delivered">{t('pigs.feedScheduleStatusDelivered', 'Entregue')}</option>
-              <option value="canceled">{t('pigs.feedScheduleStatusCanceled', 'Cancelado')}</option>
-            </select>
+          <DataTable columns={scheduleCols} data={filteredSchedule} keyExtractor={(r) => r.sk} />
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-schedule`)}>
+              {t('common.all', 'Ver tudo')} →
+            </button>
           </div>
-          <DataTable columns={scheduleCols} data={sortedSchedule} keyExtractor={(r) => r.sk} />
 
           {/* Feed truck arrivals */}
           <h2 className="section-title">{t('pigs.feedTruckArrivals')}</h2>
@@ -314,7 +324,6 @@ export default function BatchDetailView() {
             <button type="button" className="btn btn-secondary" onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
             <button type="button" className="btn btn-secondary" onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
             <button type="button" className="btn btn-secondary" onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
-            <button type="button" className="btn btn-secondary" onClick={() => setModal('feedSchedule')}>{t('pigs.feedSchedule')}</button>
           </div>
         </>
       )}
@@ -322,9 +331,6 @@ export default function BatchDetailView() {
       {/* Modals */}
       {modal === 'feedTruck' && (
         <FeedTruckArrivalForm batchId={id} feedSchedule={schedule ?? []} pendingFiscalDocs={fiscalDocs ?? []} rawMaterialTypes={rawMaterialTypes ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(() => { rFeedTrucks(); rSchedule(); rFiscalDocs(); })} />
-      )}
-      {modal === 'feedSchedule' && (
-        <FeedScheduleForm batchId={id} existing={schedule ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rSchedule)} />
       )}
       {modal === 'pigTruck' && (
         <PigTruckArrivalForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rPigTrucks)} />
