@@ -8,7 +8,7 @@ from urllib.parse import unquote
 import boto3
 
 from lmjm.model import FeedTruckArrival
-from lmjm.repo import BatchRepo, FeedScheduleFiscalDocumentRepo, FeedScheduleRepo, FeedTruckArrivalRepo
+from lmjm.repo import BatchRepo, FeedScheduleFiscalDocumentRepo, FeedScheduleRepo, FeedTruckArrivalRepo, RawMaterialTypeRepo
 from lmjm.util.datetime_util import parse_datetime_input
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
@@ -21,6 +21,7 @@ batch_repo = BatchRepo(table)
 feed_truck_arrival_repo = FeedTruckArrivalRepo(table)
 feed_schedule_repo = FeedScheduleRepo(table)
 feed_schedule_fiscal_document_repo = FeedScheduleFiscalDocumentRepo(table)
+raw_material_type_repo = RawMaterialTypeRepo(table)
 
 
 @dataclasses.dataclass
@@ -68,6 +69,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     sequence = str(uuid.uuid4())
 
+    # Resolve feed_description from RawMaterialType
+    feed_description = ""
+    rmt = raw_material_type_repo.get(request.feed_type)
+    if rmt:
+        feed_description = rmt.description
+
     arrival = FeedTruckArrival(
         pk=batch_id,
         sk=f"FeedTruckArrival|{sk_date_part}|{sequence}",
@@ -75,6 +82,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         fiscal_document_number=request.fiscal_document_number,
         actual_amount_kg=request.actual_amount_kg,
         feed_type=request.feed_type,
+        feed_description=feed_description,
         feed_schedule_id=request.feed_schedule_id,
     )
     feed_truck_arrival_repo.put(arrival)
