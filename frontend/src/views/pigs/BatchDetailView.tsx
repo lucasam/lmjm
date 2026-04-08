@@ -142,11 +142,21 @@ export default function BatchDetailView() {
     { header: t('pigs.status'), accessor: (r) => translateScheduleStatus(r.status ?? 'scheduled') },
   ];
 
-  const feedTruckCols: Column<FeedTruckArrival>[] = [
+  const feedTrucksWithCumulative = useMemo(() => {
+    const data = feedTrucks ?? [];
+    let cumulative = 0;
+    return data.map((r) => {
+      cumulative += r.actual_amount_kg;
+      return { ...r, cumulativeAmountKg: cumulative };
+    });
+  }, [feedTrucks]);
+
+  const feedTruckCols: Column<FeedTruckArrival & { cumulativeAmountKg: number }>[] = [
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
-    { header: t('pigs.feedType'), accessor: (r) => r.feed_description || getFeedTypeDescription(r.feed_type) },
+    { header: t('pigs.feedType'), accessor: (r) => `${r.feed_type} — ${r.feed_description || getFeedTypeDescription(r.feed_type)}` },
     { header: t('pigs.actualAmountKg'), accessor: (r) => formatNumber(r.actual_amount_kg) },
     { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
+    { header: 'Acumulado (kg)', accessor: (r) => formatNumber(r.cumulativeAmountKg) },
   ];
 
   const pigTruckCols: Column<PigTruckArrival>[] = [
@@ -274,7 +284,7 @@ export default function BatchDetailView() {
 
           {/* Feed truck arrivals */}
           <h2 className="section-title">{t('pigs.feedTruckArrivals')}</h2>
-          <DataTable columns={feedTruckCols} data={feedTrucks ?? []} keyExtractor={(r) => r.sk} />
+          <DataTable columns={feedTruckCols} data={feedTrucksWithCumulative} keyExtractor={(r) => r.sk} />
 
           {/* Pig truck arrivals */}
           <h2 className="section-title">{t('pigs.pigTruckArrivals')}</h2>
