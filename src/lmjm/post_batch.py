@@ -24,7 +24,6 @@ batch_repo = BatchRepo(table)
 class PostBatchRequest:
     supply_id: int
     module_id: str
-    receive_date: str
     min_feed_stock_threshold: int
     expected_slaughter_date: Optional[str] = None
 
@@ -46,10 +45,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return respond(status_code=404, error="Module not found")
 
     # Parse dates
-    receive_date = _parse_date(request.receive_date, "receive_date")
-    if not receive_date:
-        return respond(status_code=400, error="receive_date must be in YYYYMMDD format")
-
     expected_slaughter_date: Optional[str] = None
     if request.expected_slaughter_date:
         expected_slaughter_date = _parse_date(request.expected_slaughter_date, "expected_slaughter_date")
@@ -63,7 +58,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         status="created",
         supply_id=request.supply_id,
         module_id=request.module_id,
-        receive_date=receive_date,
         expected_slaughter_date=expected_slaughter_date,
         min_feed_stock_threshold=request.min_feed_stock_threshold,
     )

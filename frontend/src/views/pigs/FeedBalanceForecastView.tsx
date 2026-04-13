@@ -79,7 +79,7 @@ function computeForecast(
     planByDay[p.day_number] = p.expected_grams_per_animal;
   }
 
-  const receiveDate = new Date(batch.receive_date.substring(0, 10) + 'T00:00:00');
+  const receiveDate = new Date((batch.average_start_date ?? '').substring(0, 10) + 'T00:00:00');
   const startDate = new Date(latestBalance.measurement_date.substring(0, 10) + 'T00:00:00');
   let balance = latestBalance.balance_kg;
 

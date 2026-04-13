@@ -256,7 +256,6 @@ export default function BatchDetailView() {
           <div className="detail-grid">
             <DetailRow label={t('pigs.status')} value={statusLabel(batch.status)} />
             <DetailRow label={t('pigs.supplyId')} value={String(batch.supply_id)} />
-            <DetailRow label={t('pigs.receiveDate')} value={formatDate(batch.receive_date)} />
             <DetailRow label={t('pigs.expectedSlaughterDate')} value={batch.expected_slaughter_date ? formatDate(batch.expected_slaughter_date) : undefined} />
             <DetailRow label={t('pigs.minFeedStockThreshold')} value={formatNumber(batch.min_feed_stock_threshold)} />
           </div>
@@ -366,7 +365,7 @@ export default function BatchDetailView() {
         <MedicationShotForm batchId={id} medications={medications ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rMedications)} />
       )}
       {modal === 'feedPlan' && (
-        <FeedConsumptionPlanForm batchId={id} receiveDate={batch?.receive_date ?? ''} existing={plan ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rPlan)} />
+        <FeedConsumptionPlanForm batchId={id} receiveDate={batch?.average_start_date ?? ''} existing={plan ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rPlan)} />
       )}
       {modal === 'feedBalance' && (
         <FeedBalanceForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rBalances)} />
@@ -405,14 +404,13 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
 function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
   batchId: string;
-  initial: { status: string; supply_id: number; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number; total_animal_count?: number; average_start_date?: string; distinct_origin_count?: number; origin_types?: string[]; feed_leftover?: number };
+  initial: { status: string; supply_id: number; expected_slaughter_date?: string; min_feed_stock_threshold: number; total_animal_count?: number; average_start_date?: string; distinct_origin_count?: number; origin_types?: string[]; feed_leftover?: number };
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState(initial.status);
   const [supplyId, setSupplyId] = useState(String(initial.supply_id));
-  const [receiveDate, setReceiveDate] = useState(initial.receive_date);
   const [expectedSlaughterDate, setExpectedSlaughterDate] = useState(initial.expected_slaughter_date ?? '');
   const [minFeedStockThreshold, setMinFeedStockThreshold] = useState(String(initial.min_feed_stock_threshold));
   const [totalAnimalCount, setTotalAnimalCount] = useState(initial.total_animal_count != null ? String(initial.total_animal_count) : '');
@@ -432,7 +430,6 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
       await updateBatch(batchId, {
         status,
         supply_id: Number(supplyId),
-        receive_date: receiveDate.replace(/-/g, ''),
         ...(expectedSlaughterDate ? { expected_slaughter_date: expectedSlaughterDate.replace(/-/g, '') } : {}),
         min_feed_stock_threshold: Number(minFeedStockThreshold),
         ...(totalAnimalCount ? { total_animal_count: Number(totalAnimalCount) } : {}),
@@ -468,10 +465,6 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
           <label className="form-label">
             {t('pigs.supplyId')}
             <input type="number" min="0" step="1" value={supplyId} onChange={(e) => setSupplyId(e.target.value)} className="form-input" />
-          </label>
-          <label className="form-label">
-            {t('pigs.receiveDate')}
-            <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} className="form-input" />
           </label>
           <label className="form-label">
             {t('pigs.expectedSlaughterDate')}

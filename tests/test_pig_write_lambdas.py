@@ -93,7 +93,6 @@ def _seed_batch(table: Any) -> None:
             status="created",
             supply_id=100,
             module_id="MODULE#1",
-            receive_date="2025-01-01",
         ),
     )
 
@@ -130,7 +129,6 @@ def test_post_batch_returns_201_on_success() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#1",
-                "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
             }
         ),
@@ -141,7 +139,6 @@ def test_post_batch_returns_201_on_success() -> None:
     body = json.loads(result["body"])
     assert body["status"] == "created"
     assert body["supply_id"] == 100
-    assert body["receive_date"] == "2025-01-01"
 
 
 @mock_aws
@@ -158,7 +155,6 @@ def test_post_batch_returns_404_for_missing_module() -> None:
             {
                 "supply_id": 100,
                 "module_id": "MODULE#99",
-                "receive_date": "20250101",
                 "min_feed_stock_threshold": 1000.0,
             }
         ),
@@ -643,7 +639,18 @@ def test_post_medication_shot_returns_400_for_nonexistent_medication() -> None:
 def test_put_feed_consumption_plan_returns_200_on_success() -> None:
     """Requirement 8.28: PUT feed-consumption-plan replaces all entries and returns 200."""
     table = _create_table()
-    _seed_batch(table)
+    _seed_module(table)
+    _put(
+        table,
+        Batch(
+            pk="batch-1",
+            sk="Batch",
+            status="created",
+            supply_id=100,
+            module_id="MODULE#1",
+            average_start_date="2025-01-01",
+        ),
+    )
 
     import lmjm.put_feed_consumption_plan as mod
 

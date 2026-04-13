@@ -13,7 +13,6 @@ class Batch:
     status: str = "created"
     supply_id: int = 0
     module_id: str = ""
-    receive_date: str = ""
     expected_slaughter_date: Optional[str] = None
     min_feed_stock_threshold: int = 0
     total_animal_count: Optional[int] = None

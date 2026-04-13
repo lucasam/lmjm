@@ -23,7 +23,7 @@ function computeWeeklyData(batch: Batch, mortalities: Mortality[]): WeekRow[] {
   const totalAnimals = batch.total_animal_count ?? 0;
   if (totalAnimals === 0) return [];
 
-  const receiveDate = new Date(batch.receive_date + 'T00:00:00');
+  const receiveDate = new Date((batch.average_start_date ?? '') + 'T00:00:00');
 
   const weekDeaths: Record<number, number> = {};
   let maxWeek = 0;

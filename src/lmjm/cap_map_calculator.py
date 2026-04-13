@@ -13,7 +13,7 @@ def compute_cap_map(
     mar: Decimal,
     avg_slaughter_weight: Decimal,
     avg_piglet_weight: Decimal,
-    average_age: int,
+    average_age: Decimal,
 ) -> dict[str, Decimal]:
     """Pure function: computes CAP(1-4) and MAP(1-2) from integrator weekly data.
 
@@ -27,7 +27,7 @@ def compute_cap_map(
     cap_2 = _q(cap_1 - Decimal("0.03"))
     cap_3 = _q(cap_2 - Decimal("0.015"))
     cap_4 = _q(cap_1 - Decimal("0.015"))
-    map_1 = _q(Decimal(130 - average_age) * Decimal("0.0183") + mar)
+    map_1 = _q(Decimal(Decimal(130) - average_age) * Decimal("0.0183") + mar)
     map_2 = _q(map_1 - Decimal("0.4"))
     return {
         "cap_1": cap_1,

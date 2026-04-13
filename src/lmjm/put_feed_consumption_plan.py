@@ -61,8 +61,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # Delete all existing feed consumption plan entries for this batch
     feed_consumption_plan_repo.delete_all(batch_id)
 
-    # Compute date from batch receive_date + day_number (day 1 = receive_date + 1 day)
-    receive_date = datetime.strptime(batch.receive_date, "%Y-%m-%d")
+    # Compute date from batch average_start_date + day_number (day 1 = average_start_date + 1 day)
+    if batch.average_start_date is None:
+        return respond(status_code=400, error="average_start_date is required — generate the batch start summary first")
+    receive_date = datetime.strptime(batch.average_start_date, "%Y-%m-%d")
 
     # Create new FeedConsumptionPlan records
     new_plans: list[FeedConsumptionPlan] = []

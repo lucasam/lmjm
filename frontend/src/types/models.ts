@@ -45,7 +45,6 @@ export interface Batch {
   status: 'created' | 'in_progress' | 'delivered';
   supply_id: number;
   module_id: string;
-  receive_date: string;
   expected_slaughter_date?: string;
   min_feed_stock_threshold: number;
   // Start summary (optional, populated after trigger)

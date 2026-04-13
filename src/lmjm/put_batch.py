@@ -23,7 +23,6 @@ batch_repo = BatchRepo(table)
 class PutBatchRequest:
     status: Optional[str] = None
     supply_id: Optional[int] = None
-    receive_date: Optional[str] = None
     expected_slaughter_date: Optional[str] = None
     min_feed_stock_threshold: Optional[int] = None
     total_animal_count: Optional[int] = None
@@ -53,11 +52,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         batch.status = request.status
     if request.supply_id is not None:
         batch.supply_id = request.supply_id
-    if request.receive_date is not None:
-        parsed = _parse_date(request.receive_date)
-        if not parsed:
-            return respond(status_code=400, error="receive_date must be in YYYYMMDD format")
-        batch.receive_date = parsed
     if request.expected_slaughter_date is not None:
         parsed = _parse_date(request.expected_slaughter_date)
         if not parsed:

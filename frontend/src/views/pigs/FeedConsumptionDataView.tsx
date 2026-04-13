@@ -75,7 +75,7 @@ function computeConsumptionData(
   if (totalAnimals === 0 || balances.length < 2) return [];
 
   const sortedBalances = [...balances].sort((a, b) => a.measurement_date.localeCompare(b.measurement_date));
-  const receiveDate = batch.receive_date;
+  const receiveDate = batch.average_start_date ?? '';
 
   const planByDay: Record<number, number> = {};
   for (const p of plan) {

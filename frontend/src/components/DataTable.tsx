@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 export interface Column<T> {
-  header: string;
+  header: React.ReactNode;
   accessor: (row: T) => React.ReactNode;
 }
 

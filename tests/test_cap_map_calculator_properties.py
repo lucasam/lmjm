@@ -30,7 +30,7 @@ avg_slaughter_weight_st = st.decimals(
 avg_piglet_weight_st = st.decimals(
     min_value=Decimal("15"), max_value=Decimal("30"), places=2, allow_nan=False, allow_infinity=False
 )
-average_age_st = st.integers(min_value=80, max_value=130)
+average_age_st = st.decimals(min_value=Decimal("80"), max_value=Decimal("130"), places=2, allow_nan=False, allow_infinity=False)
 
 
 # --- Property Tests ---
@@ -50,7 +50,7 @@ def test_cap_map_formula_correctness(
     mar: Decimal,
     avg_slaughter_weight: Decimal,
     avg_piglet_weight: Decimal,
-    average_age: int,
+    average_age: Decimal,
 ) -> None:
     """Property 3: CAP/MAP formula correctness.
 
@@ -83,7 +83,7 @@ def test_cap_map_formula_correctness(
     assert result["cap_4"] == expected_cap_4, f"cap_4: {result['cap_4']} != {expected_cap_4}"
 
     # Req 10.5: map_1 = (130 - average_age) * 0.0183 + mar
-    expected_map_1 = _q(Decimal(130 - average_age) * Decimal("0.0183") + mar)
+    expected_map_1 = _q(Decimal(Decimal(130) - average_age) * Decimal("0.0183") + mar)
     assert result["map_1"] == expected_map_1, f"map_1: {result['map_1']} != {expected_map_1}"
 
     # Req 10.6: map_2 = map_1 - 0.4

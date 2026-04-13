@@ -37,7 +37,6 @@ export interface PostDiagnosticRequest {
 export interface CreateBatchRequest {
   supply_id: number;
   module_id: string;
-  receive_date: string;
   min_feed_stock_threshold: number;
 }
 
@@ -279,7 +278,6 @@ export function getBatch(batchId: string): Promise<Batch> {
 export interface UpdateBatchRequest {
   status?: string;
   supply_id?: number;
-  receive_date?: string;
   expected_slaughter_date?: string;
   min_feed_stock_threshold?: number;
   total_animal_count?: number;

@@ -17,7 +17,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
 
   const [moduleId, setModuleId] = useState('');
   const [supplyId, setSupplyId] = useState('');
-  const [receiveDate, setReceiveDate] = useState('');
   const [minFeedStockThreshold, setMinFeedStockThreshold] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +30,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
       await createBatch({
         supply_id: Number(supplyId),
         module_id: moduleId,
-        receive_date: receiveDate.replace(/-/g, ''),
         min_feed_stock_threshold: Number(minFeedStockThreshold),
       });
       setSuccess(true);
@@ -65,11 +63,6 @@ export default function BatchForm({ onClose, onSuccess }: BatchFormProps) {
                 <option key={m.pk} value={m.pk}>{m.name} (#{m.module_number})</option>
               ))}
             </select>
-          </label>
-
-          <label className="form-label">
-            {t('pigs.receiveDate')} *
-            <input type="date" required value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} className="form-input" />
           </label>
 
           <label className="form-label">

@@ -149,12 +149,12 @@ export default function IntegratorWeeklyDataView() {
     { header: t('pigs.iwdValidity', 'Vigência'), accessor: (r) => `${formatDate(r.validity_start)} – ${formatDate(r.validity_end)}` },
     { header: 'CAR', accessor: (r) => formatNumber(r.car, 4) },
     { header: 'MAR', accessor: (r) => formatNumber(r.mar, 4) },
-    { header: 'CAP(1)', accessor: (r) => formatNumber(r.cap_1, 4) },
-    { header: 'CAP(2)', accessor: (r) => formatNumber(r.cap_2, 4) },
-    { header: 'CAP(3)', accessor: (r) => formatNumber(r.cap_3, 4) },
-    { header: 'CAP(4)', accessor: (r) => formatNumber(r.cap_4, 4) },
-    { header: 'MAP(1)', accessor: (r) => formatNumber(r.map_1, 4) },
-    { header: 'MAP(2)', accessor: (r) => formatNumber(r.map_2, 4) },
+    { header: <>CAP<br />+2 origens<br />Creche</>, accessor: (r) => formatNumber(r.cap_1, 4) },
+    { header: <>CAP<br />≤2 origens<br />Creche</>, accessor: (r) => formatNumber(r.cap_2, 4) },
+    { header: <>CAP<br />+2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_3, 4) },
+    { header: <>CAP<br />≤2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_4, 4) },
+    { header: <>MAP<br />+2 origens</>, accessor: (r) => formatNumber(r.map_1, 4) },
+    { header: <>MAP<br />≤2 origens</>, accessor: (r) => formatNumber(r.map_2, 4) },
   ];
 
   const breadcrumbs = [
@@ -247,7 +247,7 @@ export default function IntegratorWeeklyDataView() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
                 <label className="form-label">
                   {t('pigs.iwdAverageAge', 'Idade Média (dias)')} *
-                  <input type="number" required min="1" value={form.average_age} onChange={(e) => setField('average_age', e.target.value)} className="form-input" />
+                  <input type="number" required min="0" step="any" value={form.average_age} onChange={(e) => setField('average_age', e.target.value)} className="form-input" />
                 </label>
                 <label className="form-label">
                   {t('pigs.iwdSamples', 'Nº Amostras')} *
@@ -263,13 +263,13 @@ export default function IntegratorWeeklyDataView() {
               {preview && (
                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#f0f4f8', borderRadius: '6px' }}>
                   <strong>{t('pigs.iwdPreview', 'Prévia CAP/MAP')}</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.25rem', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                    <span>CAP(1): {formatNumber(preview.cap1, 4)}</span>
-                    <span>CAP(2): {formatNumber(preview.cap2, 4)}</span>
-                    <span>CAP(3): {formatNumber(preview.cap3, 4)}</span>
-                    <span>CAP(4): {formatNumber(preview.cap4, 4)}</span>
-                    <span>MAP(1): {formatNumber(preview.map1, 4)}</span>
-                    <span>MAP(2): {formatNumber(preview.map2, 4)}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                    <span>CAP +2 origens (Creche): {formatNumber(preview.cap1, 4)}</span>
+                    <span>CAP ≤2 origens (Creche): {formatNumber(preview.cap2, 4)}</span>
+                    <span>CAP +2 origens (UPL): {formatNumber(preview.cap3, 4)}</span>
+                    <span>CAP ≤2 origens (UPL): {formatNumber(preview.cap4, 4)}</span>
+                    <span>MAP +2 origens: {formatNumber(preview.map1, 4)}</span>
+                    <span>MAP ≤2 origens: {formatNumber(preview.map2, 4)}</span>
                   </div>
                 </div>
               )}

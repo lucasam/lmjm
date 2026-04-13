@@ -18,7 +18,7 @@ class IntegratorWeeklyData:
     mar: Decimal = Decimal(0)
     avg_piglet_weight: Decimal = Decimal(0)
     avg_slaughter_weight: Decimal = Decimal(0)
-    average_age: int = 0
+    average_age: Decimal = Decimal(0)
     number_of_samples: int = 0
     gdp: Decimal = Decimal(0)
 

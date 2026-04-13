@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
 import { listModules, listBatches } from '../../api/client';
-import { formatDate } from '../../i18n';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -50,7 +49,6 @@ export default function PigDashboard() {
     { header: t('pigs.status'), accessor: (r) => statusLabel(r.status) },
     { header: t('pigs.supplyId'), accessor: (r) => String(r.supply_id) },
     { header: t('pigs.totalAnimalCount'), accessor: (r) => r.total_animal_count != null ? String(r.total_animal_count) : '—' },
-    { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
   ];
 
   const breadcrumbs = [

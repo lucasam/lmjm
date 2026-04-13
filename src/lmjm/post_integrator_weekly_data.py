@@ -46,7 +46,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         mar = Decimal(str(body["mar"]))
         avg_piglet_weight = Decimal(str(body["avg_piglet_weight"]))
         avg_slaughter_weight = Decimal(str(body["avg_slaughter_weight"]))
-        average_age = int(body["average_age"])
+        average_age = Decimal(str(body["average_age"]))
 
         cap_map = compute_cap_map(
             car=car,

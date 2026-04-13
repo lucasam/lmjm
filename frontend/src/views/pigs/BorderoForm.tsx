@@ -51,8 +51,8 @@ export default function BorderoForm({
   const defaultTotalFeed = existingResult?.total_feed ?? 0;
   const defaultPigletWeight = existingResult?.piglet_weight ?? batch.initial_animal_weight ?? '';
   const defaultDaysHoused = existingResult?.days_housed ?? (() => {
-    if (!batch.receive_date) return '';
-    const start = new Date(batch.receive_date + 'T00:00:00');
+    if (!batch.average_start_date) return '';
+    const start = new Date(batch.average_start_date + 'T00:00:00');
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return Math.max(0, Math.round((now.getTime() - start.getTime()) / 86400000));
