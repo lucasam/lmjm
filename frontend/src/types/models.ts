@@ -54,6 +54,7 @@ export interface Batch {
   distinct_origin_count?: number;
   origin_types?: string[];
   initial_animal_weight?: number;
+  feed_leftover?: number;
 }
 
 export interface FeedSchedule {
@@ -170,4 +171,84 @@ export interface Weight {
   pk: string;
   weight_kg: number;
   weighing_date: string;
+}
+
+export interface BatchFinancialResult {
+  pk: string;
+  sk: string;
+  type: string;
+  created_at: string;
+
+  // Farm data
+  housed_count: number;
+  mortality_count: number;
+  pig_count: number;
+  piglet_weight: number;
+  pig_weight: number;
+  total_feed: number;
+  days_housed: number;
+
+  // Integrator parameters
+  cap: number;
+  map_value: number;
+  price_per_kg: number;
+  gross_integrator_pct: number;
+
+  // Carcass calculations
+  carcass_yield_factor: number;
+  piglet_carcass_weight: number;
+  pig_carcass_weight: number;
+  total_piglet_carcass: number;
+  total_pig_carcass: number;
+  total_carcass_produced: number;
+
+  // Feed conversion
+  real_conversion: number;
+  piglet_adjustment: number;
+  carcass_adjustment: number;
+  adjusted_conversion: number;
+
+  // Performance
+  daily_weight_gain: number;
+  daily_carcass_gain: number;
+
+  // Mortality
+  real_mortality_pct: number;
+  adjusted_mortality_pct: number;
+
+  // Integrator percentage
+  mortality_adjustment_pct: number;
+  conversion_adjustment_pct: number;
+  integrator_pct: number;
+
+  // Financial result
+  gross_income: number;
+  net_income: number;
+  gross_income_per_pig: number;
+  net_income_per_pig: number;
+}
+
+export interface IntegratorWeeklyData {
+  pk: string;
+  sk: string;
+  date_generated: string;
+  validity_start: string;
+  validity_end: string;
+  source_data_start: string;
+  source_data_end: string;
+  car: number;
+  mar: number;
+  avg_piglet_weight: number;
+  avg_slaughter_weight: number;
+  average_age: number;
+  number_of_samples: number;
+  gdp: number;
+
+  // Computed CAP/MAP variants
+  cap_1: number;
+  cap_2: number;
+  cap_3: number;
+  cap_4: number;
+  map_1: number;
+  map_2: number;
 }

@@ -8,7 +8,13 @@ from urllib.parse import unquote
 import boto3
 
 from lmjm.model import FeedTruckArrival
-from lmjm.repo import BatchRepo, FeedScheduleFiscalDocumentRepo, FeedScheduleRepo, FeedTruckArrivalRepo, RawMaterialTypeRepo
+from lmjm.repo import (
+    BatchRepo,
+    FeedScheduleFiscalDocumentRepo,
+    FeedScheduleRepo,
+    FeedTruckArrivalRepo,
+    RawMaterialTypeRepo,
+)
 from lmjm.util.datetime_util import parse_datetime_input
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond

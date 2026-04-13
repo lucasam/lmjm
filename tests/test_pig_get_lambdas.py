@@ -39,7 +39,7 @@ def _set_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def _serialize_decimal_safe(obj: object) -> dict[str, Any]:
     """Wrap serialize_to_dict to convert floats to Decimal for moto compatibility."""
     d = _original_serialize(obj)
-    return json.loads(json.dumps(d), parse_float=Decimal)  # type: ignore[no-any-return]
+    return json.loads(json.dumps(d, default=str), parse_float=Decimal)  # type: ignore[no-any-return]
 
 
 def _create_table() -> Any:

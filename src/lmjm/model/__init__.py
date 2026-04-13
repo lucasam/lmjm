@@ -1,5 +1,6 @@
 from lmjm.model.animal import Animal
 from lmjm.model.batch import Batch
+from lmjm.model.batch_financial_result import BatchFinancialResult
 from lmjm.model.diagnostic import Diagnostic
 from lmjm.model.feed_balance import FeedBalance
 from lmjm.model.feed_consumption_plan import FeedConsumptionPlan
@@ -8,6 +9,7 @@ from lmjm.model.feed_schedule_fiscal_document import FeedScheduleFiscalDocument
 from lmjm.model.feed_truck_arrival import FeedTruckArrival
 from lmjm.model.fiscal_document import FiscalDocument
 from lmjm.model.insemination import Insemination
+from lmjm.model.integrator_weekly_data import IntegratorWeeklyData
 from lmjm.model.medication import Medication
 from lmjm.model.medication_shot import MedicationShot
 from lmjm.model.module import Module
@@ -19,6 +21,7 @@ from lmjm.model.weight import Weight
 __all__ = [
     "Animal",
     "Batch",
+    "BatchFinancialResult",
     "Diagnostic",
     "FeedBalance",
     "FeedConsumptionPlan",
@@ -27,6 +30,7 @@ __all__ = [
     "FeedTruckArrival",
     "FiscalDocument",
     "Insemination",
+    "IntegratorWeeklyData",
     "Medication",
     "MedicationShot",
     "Module",

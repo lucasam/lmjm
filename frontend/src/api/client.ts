@@ -16,6 +16,8 @@ import type {
   FiscalDocument,
   FeedScheduleFiscalDocument,
   RawMaterialType,
+  BatchFinancialResult,
+  IntegratorWeeklyData,
 } from '../types/models';
 
 // Request types for POST/PUT operations
@@ -284,6 +286,7 @@ export interface UpdateBatchRequest {
   average_start_date?: string;
   distinct_origin_count?: number;
   origin_types?: string[];
+  feed_leftover?: number;
 }
 
 export function updateBatch(batchId: string, data: UpdateBatchRequest): Promise<void> {
@@ -412,4 +415,24 @@ export function listAllFiscalDocuments(): Promise<FiscalDocument[]> {
 
 export function reprocessFiscalDocument(pk: string, fiscalDocumentNumber: string): Promise<void> {
   return post('/fiscal-documents/reprocess', { pk, fiscal_document_number: fiscalDocumentNumber });
+}
+
+// --- Batch Financial Results (Borderô) ---
+
+export function postBatchFinancialResult(batchId: string, data: Record<string, unknown>): Promise<void> {
+  return post(`/pigs/batches/${encodeURIComponent(batchId)}/financial-results`, data);
+}
+
+export function listBatchFinancialResults(batchId: string): Promise<BatchFinancialResult[]> {
+  return get<BatchFinancialResult[]>(`/pigs/batches/${encodeURIComponent(batchId)}/financial-results`);
+}
+
+// --- Integrator Weekly Data ---
+
+export function postIntegratorWeeklyData(data: Record<string, unknown>): Promise<void> {
+  return post('/pigs/integrator-weekly-data', data);
+}
+
+export function listIntegratorWeeklyData(): Promise<IntegratorWeeklyData[]> {
+  return get<IntegratorWeeklyData[]>('/pigs/integrator-weekly-data');
 }

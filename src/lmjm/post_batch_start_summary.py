@@ -47,7 +47,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     # Compute initial_animal_weight (weighted average by animal_count)
     total_weight: Decimal = sum((a.animal_weight * a.animal_count for a in arrivals), Decimal(0))
-    initial_animal_weight: Decimal = (total_weight / total_animal_count).quantize(Decimal("0.01")) if total_animal_count > 0 else Decimal(0)
+    initial_animal_weight: Decimal = (
+        (total_weight / total_animal_count).quantize(Decimal("0.01")) if total_animal_count > 0 else Decimal(0)
+    )
 
     # Update batch
     batch.total_animal_count = total_animal_count

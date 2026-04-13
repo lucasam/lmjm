@@ -768,6 +768,58 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_feed_balances)
 
+        # --- Batch Financial Result Lambdas ---
+
+        post_batch_financial_result = _lambda.Function(
+            self,
+            "PostBatchFinancialResultLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_batch_financial_result.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_batch_financial_result)
+
+        get_batch_financial_results = _lambda.Function(
+            self,
+            "GetBatchFinancialResultsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_batch_financial_results.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_batch_financial_results)
+
+        # --- Integrator Weekly Data Lambdas ---
+
+        post_integrator_weekly_data = _lambda.Function(
+            self,
+            "PostIntegratorWeeklyDataLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_integrator_weekly_data.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_integrator_weekly_data)
+
+        get_integrator_weekly_data = _lambda.Function(
+            self,
+            "GetIntegratorWeeklyDataLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_integrator_weekly_data.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_integrator_weekly_data)
+
         # --- Fiscal Email Intake ---
 
         fiscal_email_bucket = s3.Bucket(
@@ -918,6 +970,11 @@ class LmjmStack(Stack):
         add_cognito_method(feed_balances_resource, "POST", apigw.LambdaIntegration(post_feed_balance))
         add_cognito_method(feed_balances_resource, "GET", apigw.LambdaIntegration(get_feed_balances))
 
+        # /pigs/batches/{batch_id}/financial-results
+        financial_results_resource = batch_resource.add_resource("financial-results")
+        add_cognito_method(financial_results_resource, "POST", apigw.LambdaIntegration(post_batch_financial_result))
+        add_cognito_method(financial_results_resource, "GET", apigw.LambdaIntegration(get_batch_financial_results))
+
         # /pigs/batches/{batch_id}/fiscal-documents
         fiscal_documents_resource = batch_resource.add_resource("fiscal-documents")
         add_cognito_method(fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_fiscal_documents))
@@ -927,6 +984,13 @@ class LmjmStack(Stack):
         add_cognito_method(
             feed_schedule_fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_feed_schedule_fiscal_documents)
         )
+
+        # /pigs/integrator-weekly-data
+        integrator_weekly_data_resource = pigs_resource.add_resource("integrator-weekly-data")
+        add_cognito_method(
+            integrator_weekly_data_resource, "POST", apigw.LambdaIntegration(post_integrator_weekly_data)
+        )
+        add_cognito_method(integrator_weekly_data_resource, "GET", apigw.LambdaIntegration(get_integrator_weekly_data))
 
         # /raw-material-types (top-level, not under pigs)
         raw_material_types_resource = api.root.add_resource("raw-material-types")

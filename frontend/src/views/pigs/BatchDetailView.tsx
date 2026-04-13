@@ -17,6 +17,8 @@ import {
   updateBatch,
   listFeedScheduleFiscalDocuments,
   listRawMaterialTypes,
+  listBatchFinancialResults,
+  listIntegratorWeeklyData,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
@@ -30,6 +32,8 @@ import MedicationForm from './MedicationForm';
 import MedicationShotForm from './MedicationShotForm';
 import FeedConsumptionPlanForm from './FeedConsumptionPlanForm';
 import FeedBalanceForm from './FeedBalanceForm';
+import BorderoView from './BorderoView';
+import BorderoForm from './BorderoForm';
 import type {
   FeedSchedule,
   FeedTruckArrival,
@@ -49,6 +53,7 @@ type ModalType =
   | 'feedPlan'
   | 'feedBalance'
   | 'editBatch'
+  | 'bordero'
   | null;
 
 export default function BatchDetailView() {
@@ -73,6 +78,8 @@ export default function BatchDetailView() {
   const fetchBalances = useCallback(() => listFeedBalances(id), [id]);
   const fetchFiscalDocs = useCallback(() => listFeedScheduleFiscalDocuments(id), [id]);
   const fetchRawMaterialTypes = useCallback(() => listRawMaterialTypes(), []);
+  const fetchFinancialResults = useCallback(() => listBatchFinancialResults(id), [id]);
+  const fetchWeeklyData = useCallback(() => listIntegratorWeeklyData(), []);
 
   const { data: batch, loading: l1, error: e1, refetch: rBatch } = useApi(fetchBatch);
   const { data: schedule, loading: l2, error: e2, refetch: rSchedule } = useApi(fetchSchedule);
@@ -84,6 +91,8 @@ export default function BatchDetailView() {
   const { data: balances, loading: l8, error: e8, refetch: rBalances } = useApi(fetchBalances);
   const { data: fiscalDocs, refetch: rFiscalDocs } = useApi(fetchFiscalDocs);
   const { data: rawMaterialTypes } = useApi(fetchRawMaterialTypes);
+  const { data: financialResults, refetch: rFinancialResults } = useApi(fetchFinancialResults);
+  const { data: weeklyData } = useApi(fetchWeeklyData);
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
   const error = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
@@ -318,6 +327,15 @@ export default function BatchDetailView() {
           <h2 className="section-title">{t('pigs.feedBalance')}</h2>
           <DataTable columns={feedBalanceCols} data={balances ?? []} keyExtractor={(r) => r.sk} />
 
+          {/* Borderô (Financial Result) */}
+          <h2 className="section-title">{t('pigs.bordero', 'Borderô')}</h2>
+          <div className="action-bar" style={{ marginBottom: '0.5rem' }}>
+            <button type="button" className="btn btn-primary" onClick={() => setModal('bordero')}>
+              {t('pigs.newBordero', 'Novo Borderô')}
+            </button>
+          </div>
+          <BorderoView results={financialResults ?? []} />
+
           {/* Batch configuration actions (low frequency) */}
           <h2 className="section-title">{t('pigs.batchConfig', 'Configuração do Lote')}</h2>
           <div className="action-bar">
@@ -353,6 +371,16 @@ export default function BatchDetailView() {
       {modal === 'feedBalance' && (
         <FeedBalanceForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rBalances)} />
       )}
+      {modal === 'bordero' && batch && (
+        <BorderoForm
+          batchId={id}
+          batch={batch}
+          weeklyDataRecords={weeklyData ?? []}
+          existingResult={financialResults?.find((r) => r.type === 'simulation') ?? financialResults?.[0]}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); rFinancialResults(); }}
+        />
+      )}
       {modal === 'editBatch' && batch && (
         <BatchEditForm
           batchId={id}
@@ -377,7 +405,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
 function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
   batchId: string;
-  initial: { status: string; supply_id: number; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number; total_animal_count?: number; average_start_date?: string; distinct_origin_count?: number; origin_types?: string[] };
+  initial: { status: string; supply_id: number; receive_date: string; expected_slaughter_date?: string; min_feed_stock_threshold: number; total_animal_count?: number; average_start_date?: string; distinct_origin_count?: number; origin_types?: string[]; feed_leftover?: number };
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -391,6 +419,7 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
   const [averageStartDate, setAverageStartDate] = useState(initial.average_start_date ?? '');
   const [distinctOriginCount, setDistinctOriginCount] = useState(initial.distinct_origin_count != null ? String(initial.distinct_origin_count) : '');
   const [originTypes, setOriginTypes] = useState(initial.origin_types?.join(', ') ?? '');
+  const [feedLeftover, setFeedLeftover] = useState(initial.feed_leftover != null ? String(initial.feed_leftover) : '');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -410,6 +439,7 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
         ...(averageStartDate ? { average_start_date: averageStartDate.replace(/-/g, '') } : {}),
         ...(distinctOriginCount ? { distinct_origin_count: Number(distinctOriginCount) } : {}),
         ...(originTypes.trim() ? { origin_types: originTypes.split(',').map((s) => s.trim()).filter(Boolean) } : {}),
+        ...(feedLeftover ? { feed_leftover: Number(feedLeftover) } : {}),
       });
       setSuccess(true);
       setTimeout(onSuccess, 600);
@@ -466,6 +496,10 @@ function BatchEditForm({ batchId, initial, onClose, onSuccess }: {
           <label className="form-label">
             {t('pigs.originTypes')}
             <input type="text" value={originTypes} onChange={(e) => setOriginTypes(e.target.value)} className="form-input" placeholder="UPL, Creche" />
+          </label>
+          <label className="form-label">
+            {t('pigs.feedLeftover', 'Sobra de Ração (kg)')}
+            <input type="number" min="0" step="any" value={feedLeftover} onChange={(e) => setFeedLeftover(e.target.value)} className="form-input" />
           </label>
           <div className="modal-btn-row">
             <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>

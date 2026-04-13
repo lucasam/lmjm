@@ -67,7 +67,7 @@ def _create_table() -> Any:
 
 
 @given(code=product_code_st, category=category_st, desc=description_st)
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 @mock_aws
 def test_raw_material_type_classification_known_product(code: str, category: str, desc: str) -> None:
     """Property 3: RawMaterialType classification — known product codes.

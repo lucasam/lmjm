@@ -215,7 +215,8 @@ def test_happy_path_feed_creates_fiscal_doc_and_fsfd() -> None:
     assert len(fsfds) == 1
     assert fsfds[0]["status"] == "pending"
     assert fsfds[0]["product_code"] == "130906"
-    assert fsfds[0]["feed_schedule_id"] == "FeedSchedule|sched-1"
+    # feed_schedule_id is None (no scheduled_date from OCR), so it's skipped by skip_none_values
+    assert "feed_schedule_id" not in fsfds[0]
 
 
 # ── Idempotent processing ───────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import dataclasses
 import json
 import os
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Optional
 from urllib.parse import unquote
 
@@ -29,6 +30,7 @@ class PutBatchRequest:
     average_start_date: Optional[str] = None
     distinct_origin_count: Optional[int] = None
     origin_types: Optional[list[str]] = None
+    feed_leftover: Optional[Decimal] = None
 
 
 def _parse_date(value: str) -> Optional[str]:
@@ -74,6 +76,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         batch.distinct_origin_count = request.distinct_origin_count
     if request.origin_types is not None:
         batch.origin_types = request.origin_types
+    if request.feed_leftover is not None:
+        batch.feed_leftover = request.feed_leftover
 
     batch_repo.update(batch)
 

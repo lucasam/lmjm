@@ -21,3 +21,4 @@ class Batch:
     distinct_origin_count: Optional[int] = None
     origin_types: Optional[list[str]] = None
     initial_animal_weight: Optional[Decimal] = None
+    feed_leftover: Optional[Decimal] = None

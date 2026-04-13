@@ -15,6 +15,7 @@ import FeedConsumptionDataView from './views/pigs/FeedConsumptionDataView';
 import FeedBalanceForecastView from './views/pigs/FeedBalanceForecastView';
 import FeedScheduleFullView from './views/pigs/FeedScheduleFullView';
 import FiscalDocumentListView from './views/pigs/FiscalDocumentListView';
+import IntegratorWeeklyDataView from './views/pigs/IntegratorWeeklyDataView';
 
 function NotFound() {
   return (
@@ -159,6 +160,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <FiscalDocumentListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/integrator-weekly-data"
+        element={
+          <ProtectedRoute>
+            <IntegratorWeeklyDataView />
           </ProtectedRoute>
         }
       />
