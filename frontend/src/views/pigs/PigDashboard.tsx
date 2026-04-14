@@ -94,6 +94,9 @@ export default function PigDashboard() {
               <button type="button" className="btn btn-outline" onClick={() => navigate('/pigs/fiscal-documents')}>
                 {t('pigs.fiscalDocuments', 'Notas Fiscais')}
               </button>
+              <button type="button" className="btn btn-outline" onClick={() => navigate('/pigs/raw-material-types')}>
+                {t('pigs.rawMaterialTypes', 'Tipos de Matéria Prima')}
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => setShowBatchForm(true)}>
                 {t('pigs.newBatch')}
               </button>

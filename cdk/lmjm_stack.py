@@ -901,6 +901,18 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_raw_material_types)
 
+        post_raw_material_type = _lambda.Function(
+            self,
+            "PostRawMaterialTypeLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_raw_material_type.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_raw_material_type)
+
         # --- Pig API Gateway Routes ---
 
         # /pigs/modules
@@ -995,6 +1007,7 @@ class LmjmStack(Stack):
         # /raw-material-types (top-level, not under pigs)
         raw_material_types_resource = api.root.add_resource("raw-material-types")
         add_cognito_method(raw_material_types_resource, "GET", apigw.LambdaIntegration(get_raw_material_types))
+        add_cognito_method(raw_material_types_resource, "POST", apigw.LambdaIntegration(post_raw_material_type))
 
         # --- All Fiscal Documents + Reprocess ---
 

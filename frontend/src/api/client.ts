@@ -434,3 +434,13 @@ export function postIntegratorWeeklyData(data: Record<string, unknown>): Promise
 export function listIntegratorWeeklyData(): Promise<IntegratorWeeklyData[]> {
   return get<IntegratorWeeklyData[]>('/pigs/integrator-weekly-data');
 }
+
+export interface PostRawMaterialTypeRequest {
+  code: string;
+  description: string;
+  category: 'feed' | 'medicine';
+}
+
+export function postRawMaterialType(data: PostRawMaterialTypeRequest): Promise<void> {
+  return post('/raw-material-types', data);
+}

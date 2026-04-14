@@ -1,0 +1,12 @@
++ case "$1" in
++ tox -e build
+build: commands_pre[0]> pip-sync --python-executable /Users/lucasam/Code/lmjm/.tox/build/bin/python src/requirements.txt
+Everything up-to-date
+build: commands[0]> black --check src cdk
+All done! ✨ 🍰 ✨
+100 files would be left unchanged.
+build: commands[1]> isort --check-only src cdk
+build: commands[2]> mypy --python-executable /Users/lucasam/Code/lmjm/.tox/build/bin/python --strict src
+Success: no issues found in 97 source files
+  build: OK (3.80=setup[0.06]+cmd[0.66,0.87,0.29,1.91] seconds)
+  congratulations :) (3.82 seconds)

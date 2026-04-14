@@ -16,6 +16,7 @@ import FeedBalanceForecastView from './views/pigs/FeedBalanceForecastView';
 import FeedScheduleFullView from './views/pigs/FeedScheduleFullView';
 import FiscalDocumentListView from './views/pigs/FiscalDocumentListView';
 import IntegratorWeeklyDataView from './views/pigs/IntegratorWeeklyDataView';
+import RawMaterialTypeView from './views/pigs/RawMaterialTypeView';
 
 function NotFound() {
   return (
@@ -168,6 +169,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <IntegratorWeeklyDataView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/raw-material-types"
+        element={
+          <ProtectedRoute>
+            <RawMaterialTypeView />
           </ProtectedRoute>
         }
       />
