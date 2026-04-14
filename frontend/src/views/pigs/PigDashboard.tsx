@@ -16,6 +16,7 @@ export default function PigDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showBatchForm, setShowBatchForm] = useState(false);
+  const [showAllBatches, setShowAllBatches] = useState(false);
 
   const fetchModules = useCallback(() => listModules(), []);
   const fetchBatches = useCallback(() => listBatches(), []);
@@ -50,6 +51,11 @@ export default function PigDashboard() {
     { header: t('pigs.supplyId'), accessor: (r) => String(r.supply_id) },
     { header: t('pigs.totalAnimalCount'), accessor: (r) => r.total_animal_count != null ? String(r.total_animal_count) : '—' },
   ];
+
+  const filteredBatches = (showAllBatches
+    ? (batches ?? [])
+    : (batches ?? []).filter((b) => b.status !== 'delivered')
+  ).sort((a, b) => a.supply_id - b.supply_id);
 
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
@@ -102,9 +108,17 @@ export default function PigDashboard() {
               </button>
             </div>
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0.5rem 0' }}>
+            <input
+              type="checkbox"
+              checked={showAllBatches}
+              onChange={(e) => setShowAllBatches(e.target.checked)}
+            />
+            {t('pigs.showDelivered', 'Mostrar lotes entregues')}
+          </label>
           <DataTable
             columns={batchCols}
-            data={batches ?? []}
+            data={filteredBatches}
             keyExtractor={(r) => r.pk}
             onRowClick={(r) => navigate(`/pigs/batches/${encodeURIComponent(r.pk)}`)}
           />

@@ -32,6 +32,13 @@ class FiscalDocumentRepo:
             return None
         return load_data_class_from_dict(item, FiscalDocument)
 
+    def get_by_sk(self, pk: str, sk: str) -> Optional[FiscalDocument]:
+        response = self.table.get_item(Key={"pk": pk, "sk": sk})
+        item = response.get("Item")
+        if not item:
+            return None
+        return load_data_class_from_dict(item, FiscalDocument)
+
     def scan_all(self) -> List[FiscalDocument]:
         items: List[dict] = []  # type: ignore[type-arg]
         filter_expr = Key("sk").begins_with("FiscalDocument|")

@@ -101,10 +101,13 @@ def test_nfe_xml_parsing_extracts_all_required_fields(
 
     result = parse_nfe_xml(xml_bytes)
 
-    assert result.fiscal_document_number == nNF
-    assert result.issue_date == date_str
-    assert result.product_code == cProd
-    assert result.product_description == xProd
-    assert result.actual_amount_kg == qCom
-    assert result.supplier_name == xNome
-    assert result.order_number == xPed
+    assert len(result) == 1
+    item = result[0]
+    assert item.fiscal_document_number == nNF
+    assert item.issue_date == date_str
+    assert item.product_code == cProd
+    assert item.product_description == xProd
+    assert item.actual_amount_kg == qCom
+    assert item.supplier_name == xNome
+    assert item.order_number == xPed
+    assert item.item_number == "1"

@@ -48,9 +48,9 @@ export default function FeedTruckArrivalForm({
     setFeedDescription(rmt ? rmt.description : '');
   };
 
-  const handleFiscalDocSelect = (fiscalDocNumber: string) => {
-    if (!fiscalDocNumber) return;
-    const doc = pendingDocs.find((d) => d.fiscal_document_number === fiscalDocNumber);
+  const handleFiscalDocSelect = (docSk: string) => {
+    if (!docSk) return;
+    const doc = pendingDocs.find((d) => d.sk === docSk);
     if (!doc) return;
     setReceiveDate(`${doc.issue_date}T00:00`);
     setFiscalDocumentNumber(doc.fiscal_document_number);
@@ -103,7 +103,7 @@ export default function FeedTruckArrivalForm({
                 const rmt = feedRawMaterials.find((r) => r.code === d.product_code);
                 const desc = rmt ? rmt.description : d.product_code;
                 return (
-                  <option key={d.fiscal_document_number} value={d.fiscal_document_number}>
+                  <option key={d.sk} value={d.sk}>
                     NF {d.fiscal_document_number} — {desc} — {d.actual_amount_kg} kg ({d.issue_date})
                   </option>
                 );

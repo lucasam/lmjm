@@ -63,8 +63,10 @@ def _build_nfe_xml(
 
 def test_parse_basic_nfe() -> None:
     xml_bytes = _build_nfe_xml()
-    result = parse_nfe_xml(xml_bytes)
+    results = parse_nfe_xml(xml_bytes)
 
+    assert len(results) == 1
+    result = results[0]
     assert result.fiscal_document_number == "833871"
     assert result.issue_date == "2026-03-26"
     assert result.actual_amount_kg == 15980
@@ -74,25 +76,36 @@ def test_parse_basic_nfe() -> None:
     assert result.order_number == "0112053764"
     assert result.lot_number == ""
     assert result.expiration_date == ""
+    assert result.item_number == "1"
 
 
 def test_parse_with_rastro() -> None:
     xml_bytes = _build_nfe_xml(include_rastro=True)
-    result = parse_nfe_xml(xml_bytes)
+    results = parse_nfe_xml(xml_bytes)
 
+    assert len(results) == 1
+    result = results[0]
     assert result.lot_number == "LOT001"
     assert result.expiration_date == "2027-01-15"
 
 
-def test_parse_multiple_det_sums_qcom() -> None:
+def test_parse_multiple_det_produces_separate_items() -> None:
     items = [
         {"cProd": "130906", "xProd": "ST06 RAC SUI TERM", "qCom": "8000.5000", "xPed": "0112053764"},
-        {"cProd": "130906", "xProd": "ST06 RAC SUI TERM", "qCom": "7979.5000"},
+        {"cProd": "130907", "xProd": "ST07 RAC SUI CRESC", "qCom": "7979.5000"},
     ]
     xml_bytes = _build_nfe_xml(det_items=items)
-    result = parse_nfe_xml(xml_bytes)
+    results = parse_nfe_xml(xml_bytes)
 
-    assert result.actual_amount_kg == 15980
+    assert len(results) == 2
+    assert results[0].product_code == "130906"
+    assert results[0].actual_amount_kg == 8000  # round(8000.5) = 8000 (banker's rounding)
+    assert results[0].item_number == "1"
+    assert results[0].order_number == "0112053764"
+    assert results[1].product_code == "130907"
+    assert results[1].actual_amount_kg == 7980  # round(7979.5) = 7980
+    assert results[1].item_number == "2"
+    assert results[1].order_number == "0112053764"  # shared from first xPed
 
 
 def test_parse_qcom_rounds_to_int() -> None:
@@ -100,21 +113,21 @@ def test_parse_qcom_rounds_to_int() -> None:
         {"cProd": "130906", "xProd": "ST06 RAC SUI TERM", "qCom": "100.4999"},
     ]
     xml_bytes = _build_nfe_xml(det_items=items)
-    result = parse_nfe_xml(xml_bytes)
-    assert result.actual_amount_kg == 100
+    results = parse_nfe_xml(xml_bytes)
+    assert results[0].actual_amount_kg == 100
 
     items2 = [
         {"cProd": "130906", "xProd": "ST06 RAC SUI TERM", "qCom": "100.5001"},
     ]
     xml_bytes2 = _build_nfe_xml(det_items=items2)
-    result2 = parse_nfe_xml(xml_bytes2)
-    assert result2.actual_amount_kg == 101
+    results2 = parse_nfe_xml(xml_bytes2)
+    assert results2[0].actual_amount_kg == 101
 
 
 def test_parse_dhEmi_extracts_date_only() -> None:
     xml_bytes = _build_nfe_xml(dhEmi="2026-03-26T12:10:26-03:00")
-    result = parse_nfe_xml(xml_bytes)
-    assert result.issue_date == "2026-03-26"
+    results = parse_nfe_xml(xml_bytes)
+    assert results[0].issue_date == "2026-03-26"
 
 
 def test_parse_missing_nNF_raises() -> None:
@@ -162,11 +175,13 @@ def test_parse_missing_infNFe_raises() -> None:
 
 
 def test_parse_xPed_from_first_det() -> None:
-    """xPed should be taken from the first det that has it."""
+    """xPed should be shared across all items from the first det that has it."""
     items = [
         {"cProd": "130906", "xProd": "ST06", "qCom": "100", "xPed": "ORDER1"},
-        {"cProd": "130906", "xProd": "ST06", "qCom": "200", "xPed": "ORDER2"},
+        {"cProd": "130907", "xProd": "ST07", "qCom": "200", "xPed": "ORDER2"},
     ]
     xml_bytes = _build_nfe_xml(det_items=items)
-    result = parse_nfe_xml(xml_bytes)
-    assert result.order_number == "ORDER1"
+    results = parse_nfe_xml(xml_bytes)
+    assert len(results) == 2
+    assert results[0].order_number == "ORDER1"
+    assert results[1].order_number == "ORDER1"  # shared from first xPed

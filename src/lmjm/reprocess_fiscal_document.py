@@ -73,6 +73,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         product_description=doc.product_description,
         supplier_name=doc.supplier_name,
         order_number=doc.order_number,
+        item_number=doc.item_number,
     )
 
     if raw_material.category == "feed":

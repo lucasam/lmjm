@@ -17,3 +17,4 @@ class FiscalDocument:
     supplier_name: str = ""
     order_number: str = ""
     source_email_s3_key: Optional[str] = None
+    item_number: str = ""

@@ -20,10 +20,17 @@ class ParsedNfe:
     lot_number: str = ""  # rastro/nLote
     expiration_date: str = ""  # rastro/dVal (YYYY-MM-DD)
     scheduled_date: str = ""  # from infAdic/infCpl "Data OCR: DD MM YYYY" → YYYY-MM-DD
+    item_number: str = ""  # nItem attribute from <det> element
 
 
-def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
-    """Parse NF-e XML and extract required fields.
+def parse_nfe_xml(xml_bytes: bytes) -> list[ParsedNfe]:
+    """Parse NF-e XML and extract one ParsedNfe per <det> item.
+
+    Returns a list with one entry per <det> element. Each entry carries its own
+    product_code, product_description, actual_amount_kg, lot_number, and
+    expiration_date. Header-level fields (fiscal_document_number, issue_date,
+    supplier_name, scheduled_date) and order_number (first xPed found) are
+    shared across all items.
 
     Raises ValueError if required fields are missing or XML is malformed.
     """
@@ -51,58 +58,15 @@ def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
     if not det_elements:
         raise ValueError("No <det> elements found in XML")
 
-    total_qcom = 0.0
-    product_code = ""
-    product_description = ""
-    order_number = ""
-    lot_number = ""
-    expiration_date = ""
-
-    for det in det_elements:
-        prod = det.find("nfe:prod", NS)
-        if prod is None:
-            prod = det.find("prod")
-        if prod is None:
-            continue
-
-        qcom_text = _find_text(prod, "qCom")
-        if qcom_text is not None:
-            try:
-                total_qcom += float(qcom_text)
-            except ValueError:
-                raise ValueError(f"Invalid qCom value: {qcom_text}")
-
-        if not product_code:
-            product_code = _find_text(prod, "cProd") or ""
-        if not product_description:
-            product_description = _find_text(prod, "xProd") or ""
-        if not order_number:
-            order_number = _find_text(prod, "xPed") or ""
-
-        if not lot_number:
-            rastro = prod.find("nfe:rastro", NS)
-            if rastro is None:
-                rastro = prod.find("rastro")
-            if rastro is not None:
-                lot_number = _find_text_el(rastro, "nLote") or ""
-                expiration_date = _find_text_el(rastro, "dVal") or ""
-
-    if not product_code:
-        raise ValueError("Required field cProd not found in any <det> element")
-    if not product_description:
-        raise ValueError("Required field xProd not found in any <det> element")
-    if total_qcom == 0.0:
-        raise ValueError("Required field qCom not found or zero in all <det> elements")
-
     # Extract scheduled_date from infAdic/infCpl "Data OCR: DD MM YYYY"
     scheduled_date = ""
     inf_adic = inf_nfe.find("nfe:infAdic", NS)
     if inf_adic is None:
         inf_adic = inf_nfe.find("infAdic")
-        logger.info(f"Found infAdic: {inf_adic}")
+        logger.info("Found infAdic: %s", inf_adic)
     if inf_adic is not None:
         inf_cpl = _find_text_el(inf_adic, "infCpl")
-        logger.info(f"Found infCpl: {inf_cpl}")
+        logger.info("Found infCpl: %s", inf_cpl)
 
         if inf_cpl:
             import re
@@ -111,18 +75,69 @@ def parse_nfe_xml(xml_bytes: bytes) -> ParsedNfe:
             if m:
                 scheduled_date = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
 
-    return ParsedNfe(
-        fiscal_document_number=fiscal_document_number,
-        issue_date=issue_date,
-        actual_amount_kg=round(total_qcom),
-        product_code=product_code,
-        product_description=product_description,
-        supplier_name=supplier_name,
-        order_number=order_number,
-        lot_number=lot_number,
-        expiration_date=expiration_date,
-        scheduled_date=scheduled_date,
-    )
+    # Collect order_number from the first det that has xPed
+    order_number = ""
+    for det in det_elements:
+        prod = det.find("nfe:prod", NS)
+        if prod is None:
+            prod = det.find("prod")
+        if prod is not None:
+            xped = _find_text(prod, "xPed")
+            if xped:
+                order_number = xped
+                break
+
+    # Build one ParsedNfe per det element
+    items: list[ParsedNfe] = []
+    for det in det_elements:
+        item_number = det.get("nItem", "")
+        prod = det.find("nfe:prod", NS)
+        if prod is None:
+            prod = det.find("prod")
+        if prod is None:
+            continue
+
+        product_code = _find_text(prod, "cProd") or ""
+        product_description = _find_text(prod, "xProd") or ""
+        qcom_text = _find_text(prod, "qCom")
+        if not product_code or not product_description or qcom_text is None:
+            logger.warning("Skipping det nItem=%s: missing cProd/xProd/qCom", item_number)
+            continue
+
+        try:
+            actual_amount_kg = round(float(qcom_text))
+        except ValueError:
+            raise ValueError(f"Invalid qCom value: {qcom_text}")
+
+        lot_number = ""
+        expiration_date = ""
+        rastro = prod.find("nfe:rastro", NS)
+        if rastro is None:
+            rastro = prod.find("rastro")
+        if rastro is not None:
+            lot_number = _find_text_el(rastro, "nLote") or ""
+            expiration_date = _find_text_el(rastro, "dVal") or ""
+
+        items.append(
+            ParsedNfe(
+                fiscal_document_number=fiscal_document_number,
+                issue_date=issue_date,
+                actual_amount_kg=actual_amount_kg,
+                product_code=product_code,
+                product_description=product_description,
+                supplier_name=supplier_name,
+                order_number=order_number,
+                lot_number=lot_number,
+                expiration_date=expiration_date,
+                scheduled_date=scheduled_date,
+                item_number=item_number,
+            )
+        )
+
+    if not items:
+        raise ValueError("No valid <det> elements found in XML")
+
+    return items
 
 
 def _required_text(parent: ET.Element, path: str, field_name: str) -> str:

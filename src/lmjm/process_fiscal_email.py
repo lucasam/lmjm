@@ -144,17 +144,23 @@ def _process_single_nfe(
     batch_pk: str,
     s3_key: str,
 ) -> None:
-    """Process a single parsed NF-e: create FiscalDocument, classify, and link."""
-    # Check duplicate
-    existing = fiscal_document_repo.get(batch_pk, parsed.fiscal_document_number)
+    """Process a single parsed NF-e item: create FiscalDocument, classify, and link."""
+    # Build unique sk using item_number when present
+    if parsed.item_number:
+        doc_sk = f"FiscalDocument|{parsed.fiscal_document_number}|{parsed.item_number}"
+    else:
+        doc_sk = f"FiscalDocument|{parsed.fiscal_document_number}"
+
+    # Check duplicate by sk
+    existing = fiscal_document_repo.get_by_sk(batch_pk, doc_sk)
     if existing is not None:
-        logger.warning("Duplicate fiscal_document_number %s, skipping", parsed.fiscal_document_number)
+        logger.warning("Duplicate fiscal document sk %s, skipping", doc_sk)
         return
 
     # Create FiscalDocument
     fiscal_doc = FiscalDocument(
         pk=batch_pk,
-        sk=f"FiscalDocument|{parsed.fiscal_document_number}",
+        sk=doc_sk,
         fiscal_document_number=parsed.fiscal_document_number,
         issue_date=parsed.issue_date,
         actual_amount_kg=parsed.actual_amount_kg,
@@ -163,6 +169,7 @@ def _process_single_nfe(
         supplier_name=parsed.supplier_name,
         order_number=parsed.order_number,
         source_email_s3_key=s3_key,
+        item_number=parsed.item_number,
     )
     fiscal_document_repo.put(fiscal_doc)
     logger.info("Created FiscalDocument %s for batch %s", parsed.fiscal_document_number, batch_pk)
@@ -201,9 +208,15 @@ def _handle_feed_product(parsed: ParsedNfe, batch_pk: str) -> None:
             parsed.product_code, schedules, parsed.scheduled_date, already_matched
         )
 
+    # Build unique sk using item_number when present
+    if parsed.item_number:
+        fsfd_sk = f"FeedScheduleFiscalDocument|{parsed.fiscal_document_number}|{parsed.item_number}"
+    else:
+        fsfd_sk = f"FeedScheduleFiscalDocument|{parsed.fiscal_document_number}"
+
     fsfd = FeedScheduleFiscalDocument(
         pk=batch_pk,
-        sk=f"FeedScheduleFiscalDocument|{parsed.fiscal_document_number}",
+        sk=fsfd_sk,
         fiscal_document_number=parsed.fiscal_document_number,
         feed_schedule_id=feed_schedule_id,
         status="pending",
@@ -270,23 +283,25 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     for attachment in attachments:
         try:
-            parsed = parse_nfe_xml(attachment.content)
+            parsed_items = parse_nfe_xml(attachment.content)
         except ValueError as exc:
             logger.error("Failed to parse XML %s: %s", attachment.filename, exc)
             continue
 
-        # Identify batch
-        batch = _find_batch_by_supply_id(parsed.order_number, all_batches) if parsed.order_number else None
+        # Identify batch from the first item's order_number (shared across all items)
+        first_order = parsed_items[0].order_number if parsed_items else ""
+        batch = _find_batch_by_supply_id(first_order, all_batches) if first_order else None
         if batch is not None:
             batch_pk = batch.pk
         else:
             batch_pk = "UNMATCHED_FISCAL"
-            if parsed.order_number:
+            if first_order:
                 logger.warning(
                     "No batch found for order_number (xPed) %s, using UNMATCHED_FISCAL",
-                    parsed.order_number,
+                    first_order,
                 )
 
-        _process_single_nfe(parsed, batch_pk, s3_key)
+        for parsed in parsed_items:
+            _process_single_nfe(parsed, batch_pk, s3_key)
 
     return {"statusCode": 200, "body": "processed"}
