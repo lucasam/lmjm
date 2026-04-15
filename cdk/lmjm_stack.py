@@ -742,6 +742,46 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_feed_consumption_plan)
 
+        # --- Feed Consumption Template Lambdas ---
+
+        get_feed_consumption_templates = _lambda.Function(
+            self,
+            "GetFeedConsumptionTemplatesLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_feed_consumption_templates.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_feed_consumption_templates)
+
+        post_feed_consumption_template = _lambda.Function(
+            self,
+            "PostFeedConsumptionTemplateLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_feed_consumption_template.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_feed_consumption_template)
+
+        # --- Generate Feed Plan Lambda ---
+
+        post_generate_feed_plan = _lambda.Function(
+            self,
+            "PostGenerateFeedPlanLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_generate_feed_plan.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_generate_feed_plan)
+
         # --- Feed Balance Lambdas ---
 
         post_feed_balance = _lambda.Function(
@@ -977,6 +1017,10 @@ class LmjmStack(Stack):
         add_cognito_method(feed_consumption_plan_resource, "PUT", apigw.LambdaIntegration(put_feed_consumption_plan))
         add_cognito_method(feed_consumption_plan_resource, "GET", apigw.LambdaIntegration(get_feed_consumption_plan))
 
+        # /pigs/batches/{batch_id}/generate-feed-plan
+        generate_feed_plan_resource = batch_resource.add_resource("generate-feed-plan")
+        add_cognito_method(generate_feed_plan_resource, "POST", apigw.LambdaIntegration(post_generate_feed_plan))
+
         # /pigs/batches/{batch_id}/feed-balances
         feed_balances_resource = batch_resource.add_resource("feed-balances")
         add_cognito_method(feed_balances_resource, "POST", apigw.LambdaIntegration(post_feed_balance))
@@ -1003,6 +1047,15 @@ class LmjmStack(Stack):
             integrator_weekly_data_resource, "POST", apigw.LambdaIntegration(post_integrator_weekly_data)
         )
         add_cognito_method(integrator_weekly_data_resource, "GET", apigw.LambdaIntegration(get_integrator_weekly_data))
+
+        # /pigs/feed-consumption-templates
+        feed_consumption_templates_resource = pigs_resource.add_resource("feed-consumption-templates")
+        add_cognito_method(
+            feed_consumption_templates_resource, "GET", apigw.LambdaIntegration(get_feed_consumption_templates)
+        )
+        add_cognito_method(
+            feed_consumption_templates_resource, "POST", apigw.LambdaIntegration(post_feed_consumption_template)
+        )
 
         # /raw-material-types (top-level, not under pigs)
         raw_material_types_resource = api.root.add_resource("raw-material-types")

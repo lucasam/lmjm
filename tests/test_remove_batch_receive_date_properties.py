@@ -179,7 +179,7 @@ def test_feed_consumption_plan_uses_average_start_date(day_number: int, avg_star
         "pathParameters": {"batch_id": "batch-1"},
         "body": json.dumps(
             [
-                {"day_number": day_number, "expected_grams_per_animal": 300.0},
+                {"day_number": day_number, "expected_kg_per_animal": 0.300},
             ]
         ),
     }

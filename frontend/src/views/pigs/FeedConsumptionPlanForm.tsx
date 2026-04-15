@@ -25,25 +25,48 @@ function addDays(dateStr: string, days: number): string {
 export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing, onClose, onSuccess }: FeedConsumptionPlanFormProps) {
   const { t } = useTranslation();
 
-  const existingMap = useMemo(() => {
+  const existingKgMap = useMemo(() => {
     const m = new Map<number, number>();
     const sorted = [...existing].sort((a, b) => a.day_number - b.day_number);
-    sorted.forEach((e) => m.set(e.day_number, e.expected_grams_per_animal));
+    sorted.forEach((e) => m.set(e.day_number, e.expected_kg_per_animal));
     return m;
   }, [existing]);
 
-  const [values, setValues] = useState<string[]>(
+  const existingWeightMap = useMemo(() => {
+    const m = new Map<number, number>();
+    const sorted = [...existing].sort((a, b) => a.day_number - b.day_number);
+    sorted.forEach((e) => m.set(e.day_number, e.expected_piglet_weight));
+    return m;
+  }, [existing]);
+
+  const [kgValues, setKgValues] = useState<string[]>(
     Array.from({ length: 130 }, (_, i) => {
-      const v = existingMap.get(i + 1);
+      const v = existingKgMap.get(i + 1);
       return v !== undefined && v > 0 ? String(v) : '';
     }),
   );
+
+  const [weightValues, setWeightValues] = useState<string[]>(
+    Array.from({ length: 130 }, (_, i) => {
+      const v = existingWeightMap.get(i + 1);
+      return v !== undefined && v > 0 ? String(v) : '';
+    }),
+  );
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const updateValue = (idx: number, val: string) => {
-    setValues((prev) => {
+  const updateKg = (idx: number, val: string) => {
+    setKgValues((prev) => {
+      const next = [...prev];
+      next[idx] = val;
+      return next;
+    });
+  };
+
+  const updateWeight = (idx: number, val: string) => {
+    setWeightValues((prev) => {
       const next = [...prev];
       next[idx] = val;
       return next;
@@ -55,9 +78,10 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
     setSubmitting(true);
     setError(null);
     try {
-      const data: FeedConsumptionPlanEntry[] = values.map((v, i) => ({
+      const data: FeedConsumptionPlanEntry[] = kgValues.map((v, i) => ({
         day_number: i + 1,
-        expected_grams_per_animal: v ? Number(v) : 0,
+        expected_kg_per_animal: v ? Number(v) : 0,
+        expected_piglet_weight: weightValues[i] ? Number(weightValues[i]) : 0,
         date: addDays(receiveDate, i + 1),
       }));
       await putFeedConsumptionPlan(batchId, data);
@@ -72,7 +96,7 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal-content" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-title">{t('pigs.feedConsumptionPlan')}</h2>
 
         {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
@@ -85,11 +109,12 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
                 <tr>
                   <th>{t('pigs.dayNumber')}</th>
                   <th>{t('pigs.date')}</th>
-                  <th>{t('pigs.expectedGramsPerAnimal')}</th>
+                  <th>{t('pigs.expectedKgPerAnimal', 'kg/Animal Esperado')}</th>
+                  <th>{t('pigs.expectedPigletWeight', 'Peso Esperado (kg)')}</th>
                 </tr>
               </thead>
               <tbody>
-                {values.map((val, i) => (
+                {kgValues.map((val, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
                     <td>{formatDate(addDays(receiveDate, i + 1))}</td>
@@ -97,9 +122,21 @@ export default function FeedConsumptionPlanForm({ batchId, receiveDate, existing
                       <input
                         type="number"
                         min="0"
-                        step="1"
+                        step="0.001"
                         value={val}
-                        onChange={(e) => updateValue(i, e.target.value)}
+                        onChange={(e) => updateKg(i, e.target.value)}
+                        className="form-input"
+                        style={{ padding: '6px', fontSize: '0.85rem' }}
+                        placeholder="—"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={weightValues[i]}
+                        onChange={(e) => updateWeight(i, e.target.value)}
                         className="form-input"
                         style={{ padding: '6px', fontSize: '0.85rem' }}
                         placeholder="—"

@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any
 from urllib.parse import unquote
 
@@ -34,11 +35,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if not isinstance(entries, list):
         return respond(status_code=400, error="Body must be a JSON array")
 
-    # Filter: only keep entries with a positive expected_grams_per_animal
+    # Filter: only keep entries with a positive expected_kg_per_animal
     valid_entries: list[dict[str, Any]] = []
     for entry in entries:
         day_number = entry.get("day_number")
-        expected_grams = entry.get("expected_grams_per_animal")
+        expected_kg = entry.get("expected_kg_per_animal")
 
         if not isinstance(day_number, int) or day_number < 1 or day_number > 130:
             return respond(
@@ -47,13 +48,13 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             )
 
         # Skip entries with no value — they just won't be recorded
-        if expected_grams is None or expected_grams == "" or expected_grams == 0:
+        if expected_kg is None or expected_kg == "" or expected_kg == 0:
             continue
 
-        if not isinstance(expected_grams, (int, float)) or expected_grams <= 0:
+        if not isinstance(expected_kg, (int, float)) or expected_kg <= 0:
             return respond(
                 status_code=400,
-                error=f"expected_grams_per_animal must be a positive number, got {expected_grams}",
+                error=f"expected_kg_per_animal must be a positive number, got {expected_kg}",
             )
 
         valid_entries.append(entry)
@@ -75,7 +76,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             pk=batch_id,
             sk=f"FeedConsumptionPlan|{day_number}",
             day_number=day_number,
-            expected_grams_per_animal=int(entry_dict["expected_grams_per_animal"]),
+            expected_kg_per_animal=Decimal(str(entry_dict["expected_kg_per_animal"])),
+            expected_piglet_weight=int(entry_dict.get("expected_piglet_weight", 0)),
             date=plan_date.strftime("%Y-%m-%d"),
         )
         new_plans.append(plan)

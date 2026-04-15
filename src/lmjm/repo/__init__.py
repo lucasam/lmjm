@@ -4,6 +4,7 @@ from lmjm.repo.batch_repo import BatchRepo
 from lmjm.repo.diagnostic_repo import DiagnosticRepo
 from lmjm.repo.feed_balance_repo import FeedBalanceRepo
 from lmjm.repo.feed_consumption_plan_repo import FeedConsumptionPlanRepo
+from lmjm.repo.feed_consumption_template_repo import FeedConsumptionTemplateRepo
 from lmjm.repo.feed_schedule_fiscal_document_repo import FeedScheduleFiscalDocumentRepo
 from lmjm.repo.feed_schedule_repo import FeedScheduleRepo
 from lmjm.repo.feed_truck_arrival_repo import FeedTruckArrivalRepo
@@ -25,6 +26,7 @@ __all__ = [
     "DiagnosticRepo",
     "FeedBalanceRepo",
     "FeedConsumptionPlanRepo",
+    "FeedConsumptionTemplateRepo",
     "FeedScheduleFiscalDocumentRepo",
     "FeedScheduleRepo",
     "FeedTruckArrivalRepo",

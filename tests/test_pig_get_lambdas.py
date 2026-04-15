@@ -309,19 +309,19 @@ def _seed_feed_consumption_plan(table: Any) -> None:
     _put(
         table,
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|3", day_number=3, expected_grams_per_animal=350.0, date="2025-01-04"
+            pk="batch-1", sk="FeedConsumptionPlan|3", day_number=3, expected_kg_per_animal=Decimal("0.350"), date="2025-01-04"
         ),
     )
     _put(
         table,
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_grams_per_animal=300.0, date="2025-01-02"
+            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_kg_per_animal=Decimal("0.300"), date="2025-01-02"
         ),
     )
     _put(
         table,
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_grams_per_animal=320.0, date="2025-01-03"
+            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_kg_per_animal=Decimal("0.320"), date="2025-01-03"
         ),
     )
 

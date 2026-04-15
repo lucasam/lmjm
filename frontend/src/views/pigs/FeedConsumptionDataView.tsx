@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
@@ -9,6 +9,7 @@ import {
   listFeedTruckArrivals,
   listMortalities,
   getFeedConsumptionPlan,
+  generateFeedPlan,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
@@ -31,6 +32,7 @@ interface ConsumptionRow {
   consumptionPerPig: number;
   dailyPerAnimal: number;
   plannedDailyPerAnimal: number | null;
+  expectedPigletWeight: number | null;
 }
 
 function getCumulativeDeathsUpTo(mortalities: Mortality[], dateStr: string): number {
@@ -78,8 +80,12 @@ function computeConsumptionData(
   const receiveDate = batch.average_start_date ?? '';
 
   const planByDay: Record<number, number> = {};
+  const weightByDay: Record<number, number> = {};
   for (const p of plan) {
-    planByDay[p.day_number] = p.expected_grams_per_animal;
+    planByDay[p.day_number] = p.expected_kg_per_animal;
+    if (p.expected_piglet_weight > 0) {
+      weightByDay[p.day_number] = p.expected_piglet_weight;
+    }
   }
 
   const rows: ConsumptionRow[] = [];
@@ -126,6 +132,9 @@ function computeConsumptionData(
     }
     const plannedDailyPerAnimal = plannedCount > 0 ? plannedSum / plannedCount : null;
 
+    // Use the weight at the end of the period
+    const expectedPigletWeight = weightByDay[dayEnd] ?? null;
+
     rows.push({
       periodStart: prevDatetime,
       periodEnd: currDatetime,
@@ -135,6 +144,7 @@ function computeConsumptionData(
       consumptionPerPig,
       dailyPerAnimal,
       plannedDailyPerAnimal,
+      expectedPigletWeight,
     });
   }
 
@@ -165,6 +175,23 @@ export default function FeedConsumptionDataView() {
   const error = e1 || e2 || e3 || e4 || e5;
   const refetchAll = () => { r1(); r2(); r3(); r4(); r5(); };
 
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  const handleGeneratePlan = async () => {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      await generateFeedPlan(id);
+      refetchAll();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setGenerateError(message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const rows = useMemo(
     () => (batch && balances && arrivals && mortalities && plan
       ? computeConsumptionData(batch, balances, arrivals, mortalities, plan)
@@ -182,6 +209,23 @@ export default function FeedConsumptionDataView() {
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
       <h1 className="page-title">{t('pigs.feedConsumption')}</h1>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={generating || loading}
+          onClick={handleGeneratePlan}
+        >
+          {generating
+            ? t('pigs.generatingPlan', 'Gerando plano...')
+            : t('pigs.generatePlanFromTemplate', 'Gerar Plano a partir do Template')}
+        </button>
+      </div>
+
+      {generateError && (
+        <ErrorMessage message={generateError} onRetry={handleGeneratePlan} />
+      )}
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
@@ -201,14 +245,15 @@ export default function FeedConsumptionDataView() {
                   <th>{t('pigs.totalConsumed', 'Total Consumido (kg)')}</th>
                   <th>{t('pigs.liveAnimals', 'Animais Vivos')}</th>
                   <th>{t('pigs.consumptionPerPig', 'Consumo/Animal (kg)')}</th>
-                  <th>{t('pigs.dailyPerAnimal', 'Diário/Animal (g)')}</th>
-                  <th>{t('pigs.plannedDailyPerAnimal', 'Planejado Diário/Animal (g)')}</th>
+                  <th>{t('pigs.dailyPerAnimal', 'Diário/Animal (kg)')}</th>
+                  <th>{t('pigs.plannedDailyPerAnimal', 'Planejado Diário/Animal (kg)')}</th>
+                  <th>{t('pigs.expectedPigletWeight', 'Peso Esperado (kg)')}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, i) => {
                   const deviation = row.plannedDailyPerAnimal != null
-                    ? row.dailyPerAnimal * 1000 - row.plannedDailyPerAnimal
+                    ? row.dailyPerAnimal - row.plannedDailyPerAnimal
                     : null;
                   const deviationColor = deviation != null
                     ? (Math.abs(deviation) > row.plannedDailyPerAnimal! * 0.1 ? '#e65100' : undefined)
@@ -222,10 +267,13 @@ export default function FeedConsumptionDataView() {
                       <td>{row.liveAnimals}</td>
                       <td>{formatNumber(row.consumptionPerPig, 2)}</td>
                       <td style={{ color: deviationColor }}>
-                        {formatNumber(row.dailyPerAnimal * 1000, 1)}
+                        {formatNumber(row.dailyPerAnimal, 3)}
                       </td>
                       <td>
-                        {row.plannedDailyPerAnimal != null ? formatNumber(row.plannedDailyPerAnimal, 1) : '—'}
+                        {row.plannedDailyPerAnimal != null ? formatNumber(row.plannedDailyPerAnimal, 3) : '—'}
+                      </td>
+                      <td>
+                        {row.expectedPigletWeight != null ? formatNumber(row.expectedPigletWeight, 0) : '—'}
                       </td>
                     </tr>
                   );

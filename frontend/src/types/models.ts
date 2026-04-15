@@ -155,7 +155,8 @@ export interface MedicationShot {
 
 export interface FeedConsumptionPlanEntry {
   day_number: number;
-  expected_grams_per_animal: number;
+  expected_kg_per_animal: number;
+  expected_piglet_weight: number;
   date: string;
 }
 
@@ -225,6 +226,14 @@ export interface BatchFinancialResult {
   net_income: number;
   gross_income_per_pig: number;
   net_income_per_pig: number;
+}
+
+export interface FeedConsumptionTemplate {
+  pk: string;
+  sk: string;
+  sequence: number;
+  expected_piglet_weight: number;
+  expected_kg_per_animal: number;
 }
 
 export interface IntegratorWeeklyData {

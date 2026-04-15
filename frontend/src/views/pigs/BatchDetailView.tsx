@@ -12,7 +12,6 @@ import {
   listMortalities,
   listMedications,
   createBatchStartSummary,
-  getFeedConsumptionPlan,
   listFeedBalances,
   updateBatch,
   listFeedScheduleFiscalDocuments,
@@ -30,7 +29,6 @@ import PigTruckArrivalForm from './PigTruckArrivalForm';
 import MortalityForm from './MortalityForm';
 import MedicationForm from './MedicationForm';
 import MedicationShotForm from './MedicationShotForm';
-import FeedConsumptionPlanForm from './FeedConsumptionPlanForm';
 import FeedBalanceForm from './FeedBalanceForm';
 import BorderoView from './BorderoView';
 import BorderoForm from './BorderoForm';
@@ -50,7 +48,6 @@ type ModalType =
   | 'mortality'
   | 'medication'
   | 'medicationShot'
-  | 'feedPlan'
   | 'feedBalance'
   | 'editBatch'
   | 'bordero'
@@ -74,7 +71,6 @@ export default function BatchDetailView() {
   const fetchPigTrucks = useCallback(() => listPigTruckArrivals(id), [id]);
   const fetchMortalities = useCallback(() => listMortalities(id), [id]);
   const fetchMedications = useCallback(() => listMedications(id), [id]);
-  const fetchPlan = useCallback(() => getFeedConsumptionPlan(id), [id]);
   const fetchBalances = useCallback(() => listFeedBalances(id), [id]);
   const fetchFiscalDocs = useCallback(() => listFeedScheduleFiscalDocuments(id), [id]);
   const fetchRawMaterialTypes = useCallback(() => listRawMaterialTypes(), []);
@@ -87,19 +83,18 @@ export default function BatchDetailView() {
   const { data: pigTrucks, loading: l4, error: e4, refetch: rPigTrucks } = useApi(fetchPigTrucks);
   const { data: mortalities, loading: l5, error: e5, refetch: rMortalities } = useApi(fetchMortalities);
   const { data: medications, loading: l6, error: e6, refetch: rMedications } = useApi(fetchMedications);
-  const { data: plan, loading: l7, error: e7, refetch: rPlan } = useApi(fetchPlan);
-  const { data: balances, loading: l8, error: e8, refetch: rBalances } = useApi(fetchBalances);
+  const { data: balances, loading: l7, error: e7, refetch: rBalances } = useApi(fetchBalances);
   const { data: fiscalDocs, refetch: rFiscalDocs } = useApi(fetchFiscalDocs);
   const { data: rawMaterialTypes } = useApi(fetchRawMaterialTypes);
   const { data: financialResults, refetch: rFinancialResults } = useApi(fetchFinancialResults);
   const { data: weeklyData } = useApi(fetchWeeklyData);
 
-  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
-  const error = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
+  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
+  const error = e1 || e2 || e3 || e4 || e5 || e6 || e7;
 
   const refetchAll = () => {
     rBatch(); rSchedule(); rFeedTrucks(); rPigTrucks();
-    rMortalities(); rMedications(); rPlan(); rBalances();
+    rMortalities(); rMedications(); rBalances();
   };
 
   const handleTriggerStart = async () => {
@@ -340,7 +335,7 @@ export default function BatchDetailView() {
           <div className="action-bar">
             <button type="button" className="btn btn-secondary" onClick={() => setModal('pigTruck')}>{t('pigs.newPigTruckArrival')}</button>
             <button type="button" className="btn btn-secondary" onClick={() => setModal('medication')}>{t('pigs.newMedication')}</button>
-            <button type="button" className="btn btn-secondary" onClick={() => setModal('feedPlan')}>{t('pigs.feedConsumptionPlan')}</button>
+            <button type="button" className="btn btn-outline" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-consumption-plan`)}>{t('pigs.feedConsumptionPlan')}</button>
           </div>
         </>
       )}
@@ -363,9 +358,6 @@ export default function BatchDetailView() {
       )}
       {modal === 'medicationShot' && (
         <MedicationShotForm batchId={id} medications={medications ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rMedications)} />
-      )}
-      {modal === 'feedPlan' && (
-        <FeedConsumptionPlanForm batchId={id} receiveDate={batch?.average_start_date ?? ''} existing={plan ?? []} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rPlan)} />
       )}
       {modal === 'feedBalance' && (
         <FeedBalanceForm batchId={id} onClose={() => setModal(null)} onSuccess={closeAndRefresh(rBalances)} />

@@ -17,6 +17,8 @@ import FeedScheduleFullView from './views/pigs/FeedScheduleFullView';
 import FiscalDocumentListView from './views/pigs/FiscalDocumentListView';
 import IntegratorWeeklyDataView from './views/pigs/IntegratorWeeklyDataView';
 import RawMaterialTypeView from './views/pigs/RawMaterialTypeView';
+import FeedConsumptionTemplateView from './views/pigs/FeedConsumptionTemplateView';
+import ReadOnlyFeedConsumptionPlanView from './views/pigs/ReadOnlyFeedConsumptionPlanView';
 
 function NotFound() {
   return (
@@ -177,6 +179,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RawMaterialTypeView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/batches/:batchId/feed-consumption-plan"
+        element={
+          <ProtectedRoute>
+            <ReadOnlyFeedConsumptionPlanView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/feed-consumption-templates"
+        element={
+          <ProtectedRoute>
+            <FeedConsumptionTemplateView />
           </ProtectedRoute>
         }
       />

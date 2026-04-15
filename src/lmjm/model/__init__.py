@@ -4,6 +4,7 @@ from lmjm.model.batch_financial_result import BatchFinancialResult
 from lmjm.model.diagnostic import Diagnostic
 from lmjm.model.feed_balance import FeedBalance
 from lmjm.model.feed_consumption_plan import FeedConsumptionPlan
+from lmjm.model.feed_consumption_template import FeedConsumptionTemplate
 from lmjm.model.feed_schedule import FeedSchedule
 from lmjm.model.feed_schedule_fiscal_document import FeedScheduleFiscalDocument
 from lmjm.model.feed_truck_arrival import FeedTruckArrival
@@ -25,6 +26,7 @@ __all__ = [
     "Diagnostic",
     "FeedBalance",
     "FeedConsumptionPlan",
+    "FeedConsumptionTemplate",
     "FeedSchedule",
     "FeedScheduleFiscalDocument",
     "FeedTruckArrival",

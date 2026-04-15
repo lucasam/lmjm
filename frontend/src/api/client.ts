@@ -18,6 +18,7 @@ import type {
   RawMaterialType,
   BatchFinancialResult,
   IntegratorWeeklyData,
+  FeedConsumptionTemplate,
 } from '../types/models';
 
 // Request types for POST/PUT operations
@@ -443,4 +444,27 @@ export interface PostRawMaterialTypeRequest {
 
 export function postRawMaterialType(data: PostRawMaterialTypeRequest): Promise<void> {
   return post('/raw-material-types', data);
+}
+
+// --- Feed Consumption Templates ---
+
+export interface PostFeedConsumptionTemplateRequest {
+  sequence: number;
+  expected_piglet_weight: number;
+  expected_kg_per_animal: number;
+}
+
+export function listFeedConsumptionTemplates(): Promise<FeedConsumptionTemplate[]> {
+  return get<FeedConsumptionTemplate[]>('/pigs/feed-consumption-templates');
+}
+
+export function postFeedConsumptionTemplate(data: PostFeedConsumptionTemplateRequest): Promise<void> {
+  return post('/pigs/feed-consumption-templates', data);
+}
+
+export async function generateFeedPlan(batchId: string): Promise<FeedConsumptionPlanEntry[]> {
+  const response = await fetchWithAuth(`/pigs/batches/${encodeURIComponent(batchId)}/generate-feed-plan`, {
+    method: 'POST',
+  });
+  return response.json() as Promise<FeedConsumptionPlanEntry[]>;
 }

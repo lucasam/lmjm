@@ -38,7 +38,7 @@ export default function FeedTruckArrivalForm({
   );
 
   const pendingSchedule = feedSchedule
-    .filter((s) => !s.fulfilled_by)
+    .filter((s) => s.status === 'scheduled' && !s.fulfilled_by)
     .sort((a, b) => a.planned_date.localeCompare(b.planned_date));
   const pendingDocs = (pendingFiscalDocs ?? []).filter((d) => d.status === 'pending');
 

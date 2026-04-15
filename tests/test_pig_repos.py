@@ -569,13 +569,13 @@ def test_feed_consumption_plan_repo_put_all_and_list() -> None:
 
     plans = [
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|3", day_number=3, expected_grams_per_animal=350.0, date="2025-01-04"
+            pk="batch-1", sk="FeedConsumptionPlan|3", day_number=3, expected_kg_per_animal=Decimal("0.350"), date="2025-01-04"
         ),
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_grams_per_animal=300.0, date="2025-01-02"
+            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_kg_per_animal=Decimal("0.300"), date="2025-01-02"
         ),
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_grams_per_animal=320.0, date="2025-01-03"
+            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_kg_per_animal=Decimal("0.320"), date="2025-01-03"
         ),
     ]
     repo.put_all(plans)
@@ -594,10 +594,10 @@ def test_feed_consumption_plan_repo_delete_all() -> None:
 
     plans = [
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_grams_per_animal=300.0, date="2025-01-02"
+            pk="batch-1", sk="FeedConsumptionPlan|1", day_number=1, expected_kg_per_animal=Decimal("0.300"), date="2025-01-02"
         ),
         FeedConsumptionPlan(
-            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_grams_per_animal=320.0, date="2025-01-03"
+            pk="batch-1", sk="FeedConsumptionPlan|2", day_number=2, expected_kg_per_animal=Decimal("0.320"), date="2025-01-03"
         ),
     ]
     repo.put_all(plans)

@@ -76,7 +76,7 @@ function computeForecast(
 
   const planByDay: Record<number, number> = {};
   for (const p of plan) {
-    planByDay[p.day_number] = p.expected_grams_per_animal;
+    planByDay[p.day_number] = p.expected_kg_per_animal;
   }
 
   const receiveDate = new Date((batch.average_start_date ?? '').substring(0, 10) + 'T00:00:00');
@@ -95,10 +95,10 @@ function computeForecast(
 
       const daysSinceReceive = Math.round((currentDate.getTime() - receiveDate.getTime()) / 86400000);
       const dayNumber = daysSinceReceive + 1;
-      const gramsPerAnimal = planByDay[dayNumber] ?? 0;
+      const kgPerAnimal = planByDay[dayNumber] ?? 0;
       const deaths = getCumulativeDeathsUpTo(mortalities, dateStr);
       const liveAnimals = Math.max(1, totalAnimals - deaths);
-      const dailyConsumptionKg = (gramsPerAnimal / 1000) * liveAnimals;
+      const dailyConsumptionKg = kgPerAnimal * liveAnimals;
       balance -= dailyConsumptionKg;
     }
 

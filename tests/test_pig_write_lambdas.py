@@ -660,8 +660,8 @@ def test_put_feed_consumption_plan_returns_200_on_success() -> None:
         "pathParameters": {"batch_id": "batch-1"},
         "body": json.dumps(
             [
-                {"day_number": 1, "expected_grams_per_animal": 300.0},
-                {"day_number": 2, "expected_grams_per_animal": 320.0},
+                {"day_number": 1, "expected_kg_per_animal": 0.300},
+                {"day_number": 2, "expected_kg_per_animal": 0.320},
             ]
         ),
     }
@@ -688,7 +688,7 @@ def test_put_feed_consumption_plan_returns_400_for_invalid_day_number() -> None:
         "pathParameters": {"batch_id": "batch-1"},
         "body": json.dumps(
             [
-                {"day_number": 0, "expected_grams_per_animal": 300.0},
+                {"day_number": 0, "expected_kg_per_animal": 0.300},
             ]
         ),
     }
