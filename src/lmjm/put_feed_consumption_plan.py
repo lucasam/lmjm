@@ -77,7 +77,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             sk=f"FeedConsumptionPlan|{day_number}",
             day_number=day_number,
             expected_kg_per_animal=Decimal(str(entry_dict["expected_kg_per_animal"])),
-            expected_piglet_weight=int(entry_dict.get("expected_piglet_weight", 0)),
+            expected_piglet_weight=Decimal(str(int(entry_dict.get("expected_piglet_weight", 0)))),
             date=plan_date.strftime("%Y-%m-%d"),
         )
         new_plans.append(plan)

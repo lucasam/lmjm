@@ -60,6 +60,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pk=batch_id,
         sk=f"MedicationShot|{date_str}|{medication_id}",
         medication_name=request.medication_name,
+        medication_code=matching[0].raw_material_code,
         shot_count=request.shot_count,
         date=parsed_date.strftime("%Y-%m-%d"),
     )

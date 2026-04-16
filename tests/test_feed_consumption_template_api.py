@@ -123,7 +123,7 @@ def test_get_templates_returns_sorted_by_sequence() -> None:
             pk="FEED_CONSUMPTION_TEMPLATE",
             sk="FeedConsumptionTemplate|30",
             sequence=30,
-            expected_piglet_weight=8000,
+            expected_piglet_weight=Decimal("8000"),
             expected_kg_per_animal=Decimal("1.200"),
         ),
     )
@@ -133,7 +133,7 @@ def test_get_templates_returns_sorted_by_sequence() -> None:
             pk="FEED_CONSUMPTION_TEMPLATE",
             sk="FeedConsumptionTemplate|10",
             sequence=10,
-            expected_piglet_weight=4000,
+            expected_piglet_weight=Decimal("4000"),
             expected_kg_per_animal=Decimal("0.500"),
         ),
     )
@@ -143,7 +143,7 @@ def test_get_templates_returns_sorted_by_sequence() -> None:
             pk="FEED_CONSUMPTION_TEMPLATE",
             sk="FeedConsumptionTemplate|20",
             sequence=20,
-            expected_piglet_weight=6000,
+            expected_piglet_weight=Decimal("6000"),
             expected_kg_per_animal=Decimal("0.800"),
         ),
     )
@@ -173,9 +173,9 @@ def _generate_event(batch_id: str) -> dict[str, Any]:
 def _seed_templates(table: Any) -> None:
     """Insert a small set of templates sorted by sequence."""
     for seq, weight, kg in [
-        (1, 3000, "0.300"),
-        (2, 5000, "0.500"),
-        (3, 7000, "0.800"),
+        (1, "3000", "0.300"),
+        (2, "5000", "0.500"),
+        (3, "7000", "0.800"),
     ]:
         _put(
             table,
@@ -183,7 +183,7 @@ def _seed_templates(table: Any) -> None:
                 pk="FEED_CONSUMPTION_TEMPLATE",
                 sk=f"FeedConsumptionTemplate|{seq}",
                 sequence=seq,
-                expected_piglet_weight=weight,
+                expected_piglet_weight=Decimal(weight),
                 expected_kg_per_animal=Decimal(kg),
             ),
         )
@@ -329,7 +329,7 @@ def test_generate_plan_deletes_existing_before_writing() -> None:
                 sk=f"FeedConsumptionPlan|{day}",
                 day_number=day,
                 expected_kg_per_animal=Decimal("0.100"),
-                expected_piglet_weight=1000,
+                expected_piglet_weight=Decimal("1000"),
                 date=f"2025-02-{day:02d}",
             ),
         )

@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { getFeedTypeDescription } from '../../constants/feedTypes';
 import {
   getBatch,
+  getModule,
   getFeedSchedule,
   listFeedTruckArrivals,
   listPigTruckArrivals,
@@ -78,6 +79,8 @@ export default function BatchDetailView() {
   const fetchWeeklyData = useCallback(() => listIntegratorWeeklyData(), []);
 
   const { data: batch, loading: l1, error: e1, refetch: rBatch } = useApi(fetchBatch);
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
   const { data: schedule, loading: l2, error: e2, refetch: rSchedule } = useApi(fetchSchedule);
   const { data: feedTrucks, loading: l3, error: e3, refetch: rFeedTrucks } = useApi(fetchFeedTrucks);
   const { data: pigTrucks, loading: l4, error: e4, refetch: rPigTrucks } = useApi(fetchPigTrucks);
@@ -197,7 +200,16 @@ export default function BatchDetailView() {
     const totalAnimals = data.reduce((sum, a) => sum + a.animal_count, 0);
     const totalWeight = data.reduce((sum, a) => sum + (a.animal_weight ?? 0) * a.animal_count, 0);
     const weightedAvg = totalAnimals > 0 ? totalWeight / totalAnimals : 0;
-    return { totalAnimals, weightedAvg };
+
+    const bySex = (sex: 'Male' | 'Female') => {
+      const filtered = data.filter((a) => a.sex === sex);
+      const count = filtered.reduce((sum, a) => sum + a.animal_count, 0);
+      const weight = filtered.reduce((sum, a) => sum + (a.animal_weight ?? 0) * a.animal_count, 0);
+      const avg = count > 0 ? weight / count : 0;
+      return { count, avg };
+    };
+
+    return { totalAnimals, weightedAvg, male: bySex('Male'), female: bySex('Female') };
   }, [pigTrucks]);
 
   const mortalityCols: Column<Mortality>[] = [
@@ -249,6 +261,7 @@ export default function BatchDetailView() {
         <>
           {/* Batch attributes */}
           <div className="detail-grid">
+            <DetailRow label={t('pigs.moduleNumber', 'Módulo')} value={module?.module_number != null ? String(module.module_number) : '—'} bold />
             <DetailRow label={t('pigs.status')} value={statusLabel(batch.status)} />
             <DetailRow label={t('pigs.supplyId')} value={String(batch.supply_id)} />
             <DetailRow label={t('pigs.expectedSlaughterDate')} value={batch.expected_slaughter_date ? formatDate(batch.expected_slaughter_date) : undefined} />
@@ -306,6 +319,18 @@ export default function BatchDetailView() {
             <div className="detail-grid" style={{ marginTop: '0.5rem' }}>
               <DetailRow label={t('pigs.totalAnimalCount')} value={String(pigTruckSummary.totalAnimals)} />
               <DetailRow label={t('pigs.animalWeight')} value={formatNumber(pigTruckSummary.weightedAvg, 2)} />
+              {pigTruckSummary.male.count > 0 && (
+                <>
+                  <DetailRow label={`${t('pigs.male')} — ${t('pigs.totalAnimalCount')}`} value={String(pigTruckSummary.male.count)} />
+                  <DetailRow label={`${t('pigs.male')} — ${t('pigs.animalWeight')}`} value={formatNumber(pigTruckSummary.male.avg, 2)} />
+                </>
+              )}
+              {pigTruckSummary.female.count > 0 && (
+                <>
+                  <DetailRow label={`${t('pigs.female')} — ${t('pigs.totalAnimalCount')}`} value={String(pigTruckSummary.female.count)} />
+                  <DetailRow label={`${t('pigs.female')} — ${t('pigs.animalWeight')}`} value={formatNumber(pigTruckSummary.female.avg, 2)} />
+                </>
+              )}
             </div>
           )}
 
@@ -384,11 +409,11 @@ export default function BatchDetailView() {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value?: string }) {
+function DetailRow({ label, value, bold }: { label: string; value?: string; bold?: boolean }) {
   return (
     <div className="detail-row">
-      <span className="detail-label" style={{ minWidth: '180px' }}>{label}</span>
-      <span className="detail-value">{value ?? '—'}</span>
+      <span className="detail-label" style={{ minWidth: '180px', fontWeight: bold ? 'bold' : undefined }}>{label}</span>
+      <span className="detail-value" style={{ fontWeight: bold ? 'bold' : undefined }}>{value ?? '—'}</span>
     </div>
   );
 }

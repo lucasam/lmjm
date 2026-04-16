@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
@@ -9,7 +9,6 @@ import {
   listFeedTruckArrivals,
   listMortalities,
   getFeedConsumptionPlan,
-  generateFeedPlan,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
@@ -175,23 +174,6 @@ export default function FeedConsumptionDataView() {
   const error = e1 || e2 || e3 || e4 || e5;
   const refetchAll = () => { r1(); r2(); r3(); r4(); r5(); };
 
-  const [generating, setGenerating] = useState(false);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-
-  const handleGeneratePlan = async () => {
-    setGenerating(true);
-    setGenerateError(null);
-    try {
-      await generateFeedPlan(id);
-      refetchAll();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setGenerateError(message);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   const rows = useMemo(
     () => (batch && balances && arrivals && mortalities && plan
       ? computeConsumptionData(batch, balances, arrivals, mortalities, plan)
@@ -209,23 +191,6 @@ export default function FeedConsumptionDataView() {
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
       <h1 className="page-title">{t('pigs.feedConsumption')}</h1>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={generating || loading}
-          onClick={handleGeneratePlan}
-        >
-          {generating
-            ? t('pigs.generatingPlan', 'Gerando plano...')
-            : t('pigs.generatePlanFromTemplate', 'Gerar Plano a partir do Template')}
-        </button>
-      </div>
-
-      {generateError && (
-        <ErrorMessage message={generateError} onRetry={handleGeneratePlan} />
-      )}
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
@@ -273,7 +238,7 @@ export default function FeedConsumptionDataView() {
                         {row.plannedDailyPerAnimal != null ? formatNumber(row.plannedDailyPerAnimal, 3) : '—'}
                       </td>
                       <td>
-                        {row.expectedPigletWeight != null ? formatNumber(row.expectedPigletWeight, 0) : '—'}
+                        {row.expectedPigletWeight != null ? formatNumber(row.expectedPigletWeight, 1) : '—'}
                       </td>
                     </tr>
                   );

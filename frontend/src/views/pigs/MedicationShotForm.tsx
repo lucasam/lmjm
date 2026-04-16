@@ -52,7 +52,7 @@ export default function MedicationShotForm({ batchId, medications, onClose, onSu
             <select required value={medicationName} onChange={(e) => setMedicationName(e.target.value)} className="form-input">
               <option value="">—</option>
               {medications.map((m) => (
-                <option key={m.sk} value={m.medication_name}>{m.medication_name}</option>
+                <option key={m.sk} value={m.medication_name}>{m.raw_material_code ? `${m.raw_material_code} — ` : ''}{m.medication_name}</option>
               ))}
             </select>
           </label>

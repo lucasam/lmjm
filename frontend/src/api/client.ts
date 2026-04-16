@@ -462,9 +462,15 @@ export function postFeedConsumptionTemplate(data: PostFeedConsumptionTemplateReq
   return post('/pigs/feed-consumption-templates', data);
 }
 
-export async function generateFeedPlan(batchId: string): Promise<FeedConsumptionPlanEntry[]> {
+export interface GenerateFeedPlanRequest {
+  average_start_date?: string;
+  initial_animal_weight?: number;
+}
+
+export async function generateFeedPlan(batchId: string, params?: GenerateFeedPlanRequest): Promise<FeedConsumptionPlanEntry[]> {
   const response = await fetchWithAuth(`/pigs/batches/${encodeURIComponent(batchId)}/generate-feed-plan`, {
     method: 'POST',
+    ...(params ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) } : {}),
   });
   return response.json() as Promise<FeedConsumptionPlanEntry[]>;
 }

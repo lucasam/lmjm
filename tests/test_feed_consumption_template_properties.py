@@ -24,7 +24,13 @@ from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serializ
 # --- Strategies ---
 
 sequence_st = st.integers(min_value=0, max_value=10_000)
-expected_piglet_weight_st = st.integers(min_value=0, max_value=100_000)
+expected_piglet_weight_st = st.decimals(
+    min_value=0,
+    max_value=100_000,
+    allow_nan=False,
+    allow_infinity=False,
+    places=1,
+)
 expected_kg_per_animal_st = st.decimals(
     min_value=0,
     max_value=1000,
@@ -55,7 +61,7 @@ fields_to_omit_st = st.sampled_from(_fields_to_omit_options)
 @settings(max_examples=100)
 def test_feed_consumption_template_round_trip(
     sequence: int,
-    expected_piglet_weight: int,
+    expected_piglet_weight: Decimal,
     expected_kg_per_animal: Decimal,
 ) -> None:
     """Property 1: FeedConsumptionTemplate serialization round-trip.
@@ -138,13 +144,13 @@ def test_post_template_rejects_missing_fields() -> None:
     def run_property(
         fields_to_omit: tuple[str, ...],
         sequence: int,
-        expected_piglet_weight: int,
+        expected_piglet_weight: Decimal,
         expected_kg_per_animal: Decimal,
     ) -> None:
         # Build a complete payload, then remove the fields to omit
         full_payload: dict[str, Any] = {
             "sequence": sequence,
-            "expected_piglet_weight": expected_piglet_weight,
+            "expected_piglet_weight": float(expected_piglet_weight),
             "expected_kg_per_animal": float(expected_kg_per_animal),
         }
         incomplete_payload = {k: v for k, v in full_payload.items() if k not in fields_to_omit}
@@ -190,12 +196,12 @@ def test_post_template_valid_fields_creates_record() -> None:
     @settings(max_examples=100, deadline=None)
     def run_property(
         sequence: int,
-        expected_piglet_weight: int,
+        expected_piglet_weight: Decimal,
         expected_kg_per_animal: Decimal,
     ) -> None:
         payload: dict[str, Any] = {
             "sequence": sequence,
-            "expected_piglet_weight": expected_piglet_weight,
+            "expected_piglet_weight": float(expected_piglet_weight),
             "expected_kg_per_animal": float(expected_kg_per_animal),
         }
 
@@ -207,7 +213,7 @@ def test_post_template_valid_fields_creates_record() -> None:
         assert body["pk"] == "FEED_CONSUMPTION_TEMPLATE"
         assert body["sk"] == f"FeedConsumptionTemplate|{sequence}"
         assert body["sequence"] == sequence
-        assert body["expected_piglet_weight"] == expected_piglet_weight
+        assert float(body["expected_piglet_weight"]) == pytest.approx(float(expected_piglet_weight), abs=1e-6)
 
     run_property()
 

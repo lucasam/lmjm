@@ -149,6 +149,7 @@ export interface MedicationShot {
   pk: string;
   sk: string;
   medication_name: string;
+  medication_code: string;
   shot_count: number;
   date: string;
 }

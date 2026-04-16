@@ -41,7 +41,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pk="FEED_CONSUMPTION_TEMPLATE",
         sk=f"FeedConsumptionTemplate|{sequence}",
         sequence=sequence,
-        expected_piglet_weight=body["expected_piglet_weight"],
+        expected_piglet_weight=Decimal(str(body["expected_piglet_weight"])),
         expected_kg_per_animal=Decimal(str(body["expected_kg_per_animal"])),
     )
 

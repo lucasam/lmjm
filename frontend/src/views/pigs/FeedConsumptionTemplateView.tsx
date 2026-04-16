@@ -40,8 +40,9 @@ export default function FeedConsumptionTemplateView() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [page, setPage] = useState(0);
 
-  const totalPages = Math.ceil((data?.length ?? 0) / PAGE_SIZE);
-  const pageData = (data ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const sorted = [...(data ?? [])].sort((a, b) => a.sequence - b.sequence);
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const setField = (field: keyof FormState, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -99,7 +100,7 @@ export default function FeedConsumptionTemplateView() {
 
   const columns: Column<FeedConsumptionTemplate>[] = [
     { header: t('feedConsumptionTemplate.sequence', 'Sequência'), accessor: (r) => r.sequence },
-    { header: t('feedConsumptionTemplate.expectedPigletWeight', 'Peso Esperado (g)'), accessor: (r) => r.expected_piglet_weight },
+    { header: t('feedConsumptionTemplate.expectedPigletWeight', 'Peso Esperado (kg)'), accessor: (r) => r.expected_piglet_weight },
     { header: t('feedConsumptionTemplate.expectedKgPerAnimal', 'Kg/Animal Esperado'), accessor: (r) => r.expected_kg_per_animal },
   ];
 
@@ -178,10 +179,11 @@ export default function FeedConsumptionTemplateView() {
               </label>
 
               <label className="form-label">
-                {t('feedConsumptionTemplate.expectedPigletWeight', 'Peso Esperado (g)')} *
+                {t('feedConsumptionTemplate.expectedPigletWeight', 'Peso Esperado (kg)')} *
                 <input
                   type="number"
                   required
+                  step="0.1"
                   value={form.expected_piglet_weight}
                   onChange={(e) => setField('expected_piglet_weight', e.target.value)}
                   className="form-input"
