@@ -26,6 +26,7 @@ class PostMedicationRequest:
     medication_name: str
     expiration_date: str
     part_number: str
+    raw_material_code: str = ""
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -59,6 +60,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         medication_name=request.medication_name,
         expiration_date=parsed_date.strftime("%Y-%m-%d"),
         part_number=request.part_number,
+        raw_material_code=request.raw_material_code,
     )
     medication_repo.put(medication)
 

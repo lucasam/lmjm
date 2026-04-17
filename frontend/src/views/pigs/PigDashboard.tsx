@@ -82,14 +82,6 @@ export default function PigDashboard() {
       {!loading && !error && (
         <>
           {/* Module summary */}
-          <h2 className="section-title">{t('pigs.modules')}</h2>
-          <DataTable
-            columns={moduleCols}
-            data={modules ?? []}
-            keyExtractor={(r) => r.pk}
-            onRowClick={(r) => navigate(`/pigs/modules/${encodeURIComponent(r.pk)}`)}
-          />
-
           {/* Active batches */}
           <div className="action-bar" style={{ justifyContent: 'space-between' }}>
             <h2 className="section-title" style={{ margin: 0, border: 'none', paddingBottom: 0 }}>{t('pigs.batches')}</h2>
@@ -124,6 +116,15 @@ export default function PigDashboard() {
             data={filteredBatches}
             keyExtractor={(r) => r.pk}
             onRowClick={(r) => navigate(`/pigs/batches/${encodeURIComponent(r.pk)}`)}
+          />
+
+          {/* Module summary */}
+          <h2 className="section-title">{t('pigs.modules')}</h2>
+          <DataTable
+            columns={moduleCols}
+            data={modules ?? []}
+            keyExtractor={(r) => r.pk}
+            onRowClick={(r) => navigate(`/pigs/modules/${encodeURIComponent(r.pk)}`)}
           />
         </>
       )}

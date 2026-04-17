@@ -76,6 +76,7 @@ export interface PostMedicationRequest {
   medication_name: string;
   expiration_date: string;
   part_number: string;
+  raw_material_code?: string;
 }
 
 export interface PostMedicationShotRequest {

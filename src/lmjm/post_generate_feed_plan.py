@@ -50,7 +50,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             status_code=400, error="initial_animal_weight is required — generate the batch start summary first"
         )
 
-    templates = feed_consumption_template_repo.list_all()
+    templates = sorted(feed_consumption_template_repo.list_all(), key=lambda t: t.sequence)
 
     # Find first template where expected_piglet_weight >= initial_animal_weight
     start_index: int | None = None

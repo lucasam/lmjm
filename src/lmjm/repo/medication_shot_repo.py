@@ -20,7 +20,8 @@ class MedicationShotRepo:
 
     def list(self, pk: str, month: str | None = None) -> list[MedicationShot]:
         if month:
-            prefix = f"MedicationShot|{month}"
+            # month comes as "YYYY-MM", sk uses YYYYMMDD format — strip the dash
+            prefix = f"MedicationShot|{month.replace('-', '')}"
         else:
             prefix = "MedicationShot|"
         response = self.table.query(

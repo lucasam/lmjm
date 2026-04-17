@@ -58,8 +58,8 @@ export default function ReadOnlyFeedConsumptionPlanView() {
   const columns: Column<FeedConsumptionPlanEntry>[] = [
     { header: t('feedConsumptionPlan.dayNumber', 'Dia'), accessor: (r) => r.day_number },
     { header: t('feedConsumptionPlan.date', 'Data'), accessor: (r) => r.date },
-    { header: t('feedConsumptionPlan.expectedKgPerAnimal', 'Kg/Animal Esperado'), accessor: (r) => r.expected_kg_per_animal },
     { header: t('feedConsumptionPlan.expectedPigletWeight', 'Peso Esperado (kg)'), accessor: (r) => r.expected_piglet_weight },
+    { header: t('feedConsumptionPlan.expectedKgPerAnimal', 'Kg/Animal Esperado'), accessor: (r) => r.expected_kg_per_animal },
   ];
 
   const breadcrumbs = [

@@ -12,6 +12,7 @@ interface MedicationFormProps {
 export default function MedicationForm({ batchId, onClose, onSuccess }: MedicationFormProps) {
   const { t } = useTranslation();
   const [medicationName, setMedicationName] = useState('');
+  const [rawMaterialCode, setRawMaterialCode] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [partNumber, setPartNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -40,6 +41,7 @@ export default function MedicationForm({ batchId, onClose, onSuccess }: Medicati
   const handleMedicineSelect = (code: string) => {
     const rmt = medicineTypes.find((m) => m.code === code);
     setMedicationName(rmt ? rmt.description : '');
+    setRawMaterialCode(code);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +53,7 @@ export default function MedicationForm({ batchId, onClose, onSuccess }: Medicati
         medication_name: medicationName,
         expiration_date: expirationDate.replace(/-/g, ''),
         part_number: partNumber,
+        raw_material_code: rawMaterialCode,
       });
       setSuccess(true);
       setTimeout(onSuccess, 800);

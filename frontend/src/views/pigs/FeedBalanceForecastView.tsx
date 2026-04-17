@@ -28,6 +28,8 @@ import type {
 
 interface ForecastRow {
   date: string;
+  estimatedConsumption: number;
+  estimatedFeedTruckArrival: number;
   projectedBalance: number;
   overCapacity: boolean;
   belowThreshold: boolean;
@@ -90,20 +92,25 @@ function computeForecast(
     const currentDate = new Date(startDate.getTime() + d * 86400000);
     const dateStr = currentDate.toISOString().substring(0, 10);
 
+    let estimatedConsumption = 0;
+    const estimatedFeedTruckArrival = deliveryByDate[dateStr] || 0;
+
     if (d > 0) {
-      balance += deliveryByDate[dateStr] || 0;
+      balance += estimatedFeedTruckArrival;
 
       const daysSinceReceive = Math.round((currentDate.getTime() - receiveDate.getTime()) / 86400000);
       const dayNumber = daysSinceReceive + 1;
       const kgPerAnimal = planByDay[dayNumber] ?? 0;
       const deaths = getCumulativeDeathsUpTo(mortalities, dateStr);
       const liveAnimals = Math.max(1, totalAnimals - deaths);
-      const dailyConsumptionKg = kgPerAnimal * liveAnimals;
-      balance -= dailyConsumptionKg;
+      estimatedConsumption = kgPerAnimal * liveAnimals;
+      balance -= estimatedConsumption;
     }
 
     rows.push({
       date: dateStr,
+      estimatedConsumption,
+      estimatedFeedTruckArrival,
       projectedBalance: balance,
       overCapacity: totalSiloCapacity > 0 && balance > totalSiloCapacity,
       belowThreshold: balance < minThreshold,
@@ -189,6 +196,8 @@ export default function FeedBalanceForecastView() {
                 <thead>
                   <tr>
                     <th>{t('pigs.date')}</th>
+                    <th>{t('pigs.estimatedConsumption', 'Consumo Estimado (kg)')}</th>
+                    <th>{t('pigs.estimatedFeedTruckArrival', 'Entrega Prevista (kg)')}</th>
                     <th>{t('pigs.projectedBalance', 'Saldo Projetado (kg)')}</th>
                   </tr>
                 </thead>
@@ -201,6 +210,8 @@ export default function FeedBalanceForecastView() {
                     return (
                       <tr key={row.date} style={rowBg ? { backgroundColor: rowBg } : undefined}>
                         <td>{formatDate(row.date)}</td>
+                        <td>{row.estimatedConsumption > 0 ? formatNumber(row.estimatedConsumption, 1) : '—'}</td>
+                        <td>{row.estimatedFeedTruckArrival > 0 ? formatNumber(row.estimatedFeedTruckArrival, 1) : '—'}</td>
                         <td style={{
                           fontWeight: 600,
                           color: row.overCapacity ? 'var(--error)' : row.belowThreshold ? 'var(--accent)' : undefined,
