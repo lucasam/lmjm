@@ -1,13 +1,13 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
+import { getFeedTypeDescription } from '../../constants/feedTypes';
 import {
   getBatch,
   listFeedBalances,
   getFeedSchedule,
-  listFeedTruckArrivals,
   getFeedConsumptionPlan,
   listMortalities,
   getModule,
@@ -20,7 +20,6 @@ import type {
   Batch,
   FeedBalance,
   FeedSchedule,
-  FeedTruckArrival,
   FeedConsumptionPlanEntry,
   Mortality,
   Module,
@@ -30,6 +29,7 @@ interface ForecastRow {
   date: string;
   estimatedConsumption: number;
   estimatedFeedTruckArrival: number;
+  estimatedFeedTruckDescription: string;
   projectedBalance: number;
   overCapacity: boolean;
   belowThreshold: boolean;
@@ -47,10 +47,10 @@ function computeForecast(
   batch: Batch,
   balances: FeedBalance[],
   schedule: FeedSchedule[],
-  arrivals: FeedTruckArrival[],
   plan: FeedConsumptionPlanEntry[],
   mortalities: Mortality[],
   moduleData: Module,
+  includeBalanceDayDelivery: boolean,
 ): ForecastRow[] {
   const totalAnimals = batch.total_animal_count ?? 0;
   if (totalAnimals === 0 || balances.length === 0) return [];
@@ -61,18 +61,14 @@ function computeForecast(
   const sortedBalances = [...balances].sort((a, b) => a.measurement_date.localeCompare(b.measurement_date));
   const latestBalance = sortedBalances[sortedBalances.length - 1];
 
-  const fulfilledScheduleIds = new Set<string>();
-  for (const a of arrivals) {
-    if (a.feed_schedule_id) fulfilledScheduleIds.add(a.feed_schedule_id);
-  }
-  for (const s of schedule) {
-    if (s.fulfilled_by) fulfilledScheduleIds.add(s.sk);
-  }
-
+  // Change 1: Include scheduled and delivered schedules (exclude only canceled)
   const deliveryByDate: Record<string, number> = {};
+  const deliveryDescByDate: Record<string, string[]> = {};
   for (const s of schedule) {
-    if (!fulfilledScheduleIds.has(s.sk)) {
+    if (s.status === 'scheduled' || s.status === 'delivered') {
       deliveryByDate[s.planned_date] = (deliveryByDate[s.planned_date] || 0) + s.expected_amount_kg;
+      if (!deliveryDescByDate[s.planned_date]) deliveryDescByDate[s.planned_date] = [];
+      deliveryDescByDate[s.planned_date].push(s.feed_description || getFeedTypeDescription(s.feed_type));
     }
   }
 
@@ -94,8 +90,14 @@ function computeForecast(
 
     let estimatedConsumption = 0;
     const estimatedFeedTruckArrival = deliveryByDate[dateStr] || 0;
+    const estimatedFeedTruckDescription = (deliveryDescByDate[dateStr] || []).join(', ');
 
-    if (d > 0) {
+    if (d === 0) {
+      // Change 2: optionally include delivery on the balance measurement day
+      if (includeBalanceDayDelivery && estimatedFeedTruckArrival > 0) {
+        balance += estimatedFeedTruckArrival;
+      }
+    } else {
       balance += estimatedFeedTruckArrival;
 
       const daysSinceReceive = Math.round((currentDate.getTime() - receiveDate.getTime()) / 86400000);
@@ -111,6 +113,7 @@ function computeForecast(
       date: dateStr,
       estimatedConsumption,
       estimatedFeedTruckArrival,
+      estimatedFeedTruckDescription,
       projectedBalance: balance,
       overCapacity: totalSiloCapacity > 0 && balance > totalSiloCapacity,
       belowThreshold: balance < minThreshold,
@@ -131,7 +134,6 @@ export default function FeedBalanceForecastView() {
   const fetchBatch = useCallback(() => getBatch(id), [id]);
   const fetchBalances = useCallback(() => listFeedBalances(id), [id]);
   const fetchSchedule = useCallback(() => getFeedSchedule(id), [id]);
-  const fetchArrivals = useCallback(() => listFeedTruckArrivals(id), [id]);
   const fetchPlan = useCallback(() => getFeedConsumptionPlan(id), [id]);
   const fetchMortalities = useCallback(() => listMortalities(id), [id]);
 
@@ -144,21 +146,29 @@ export default function FeedBalanceForecastView() {
 
   const { data: balances, loading: l2, error: e2, refetch: r2 } = useApi(fetchBalances);
   const { data: schedule, loading: l3, error: e3, refetch: r3 } = useApi(fetchSchedule);
-  const { data: arrivals, loading: l4, error: e4, refetch: r4 } = useApi(fetchArrivals);
-  const { data: plan, loading: l5, error: e5, refetch: r5 } = useApi(fetchPlan);
-  const { data: mortalities, loading: l6, error: e6, refetch: r6 } = useApi(fetchMortalities);
-  const { data: moduleData, loading: l7, error: e7, refetch: r7 } = useApi(fetchModule);
+  const { data: plan, loading: l4, error: e4, refetch: r4 } = useApi(fetchPlan);
+  const { data: mortalities, loading: l5, error: e5, refetch: r5 } = useApi(fetchMortalities);
+  const { data: moduleData, loading: l6, error: e6, refetch: r6 } = useApi(fetchModule);
 
-  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
-  const error = e1 || e2 || e3 || e4 || e5 || e6 || e7;
-  const refetchAll = () => { r1(); r2(); r3(); r4(); r5(); r6(); r7(); };
+  const loading = l1 || l2 || l3 || l4 || l5 || l6;
+  const error = e1 || e2 || e3 || e4 || e5 || e6;
+  const refetchAll = () => { r1(); r2(); r3(); r4(); r5(); r6(); };
+
+  const [includeBalanceDayDelivery, setIncludeBalanceDayDelivery] = useState(false);
 
   const forecastRows = useMemo(
-    () => (batch && balances && schedule && arrivals && plan && mortalities && moduleData
-      ? computeForecast(batch, balances, schedule, arrivals, plan, mortalities, moduleData)
+    () => (batch && balances && schedule && plan && mortalities && moduleData
+      ? computeForecast(batch, balances, schedule, plan, mortalities, moduleData, includeBalanceDayDelivery)
       : []),
-    [batch, balances, schedule, arrivals, plan, mortalities, moduleData],
+    [batch, balances, schedule, plan, mortalities, moduleData, includeBalanceDayDelivery],
   );
+
+  const PT_WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const formatDateWithWeekday = (dateStr: string): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${formatDate(dateStr)} (${PT_WEEKDAYS[d.getDay()]})`;
+  };
+  const todayStr = new Date().toISOString().substring(0, 10);
 
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
@@ -170,6 +180,15 @@ export default function FeedBalanceForecastView() {
   return (
     <Layout breadcrumbs={breadcrumbs} userName={user?.name} userEmail={user?.email} onLogout={logout}>
       <h1 className="page-title">{t('pigs.feedForecast')}</h1>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0.5rem 0 1rem' }}>
+        <input
+          type="checkbox"
+          checked={includeBalanceDayDelivery}
+          onChange={(e) => setIncludeBalanceDayDelivery(e.target.checked)}
+        />
+        {t('pigs.includeBalanceDayDelivery', 'Incluir entrega do dia do balanço')}
+      </label>
 
       {loading && <LoadingSpinner />}
       {error && <ErrorMessage message={error} onRetry={refetchAll} />}
@@ -203,15 +222,17 @@ export default function FeedBalanceForecastView() {
                 </thead>
                 <tbody>
                   {forecastRows.map((row) => {
+                    const isToday = row.date === todayStr;
                     let rowBg: string | undefined;
-                    if (row.overCapacity) rowBg = '#ffebee';
+                    if (isToday) rowBg = '#e3f2fd';
+                    else if (row.overCapacity) rowBg = '#ffebee';
                     else if (row.belowThreshold) rowBg = '#fff3e0';
 
                     return (
                       <tr key={row.date} style={rowBg ? { backgroundColor: rowBg } : undefined}>
-                        <td>{formatDate(row.date)}</td>
+                        <td style={isToday ? { fontWeight: 700 } : undefined}>{formatDateWithWeekday(row.date)}</td>
                         <td>{row.estimatedConsumption > 0 ? formatNumber(row.estimatedConsumption, 1) : '—'}</td>
-                        <td>{row.estimatedFeedTruckArrival > 0 ? formatNumber(row.estimatedFeedTruckArrival, 1) : '—'}</td>
+                        <td>{row.estimatedFeedTruckArrival > 0 ? `${formatNumber(row.estimatedFeedTruckArrival, 1)} — ${row.estimatedFeedTruckDescription}` : '—'}</td>
                         <td style={{
                           fontWeight: 600,
                           color: row.overCapacity ? 'var(--error)' : row.belowThreshold ? 'var(--accent)' : undefined,
