@@ -8,6 +8,7 @@ from urllib.parse import unquote
 import boto3
 
 from lmjm.model import FeedTruckArrival
+from lmjm.model.feed_schedule import FeedScheduleStatus
 from lmjm.repo import (
     BatchRepo,
     FeedScheduleFiscalDocumentRepo,
@@ -100,6 +101,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     # Update FeedSchedule status to "delivered" if feed_schedule_id provided
     if request.feed_schedule_id:
-        feed_schedule_repo.update_status_and_fulfilled_by(batch_id, request.feed_schedule_id, "delivered", arrival.sk)
+        feed_schedule_repo.update_status_and_fulfilled_by(
+            batch_id, request.feed_schedule_id, FeedScheduleStatus.delivered, arrival.sk
+        )
 
     return respond(status_code=201, body=serialize_to_dict(arrival))

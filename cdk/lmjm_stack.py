@@ -808,6 +808,18 @@ class LmjmStack(Stack):
         )
         table.grant_read_data(get_feed_balances)
 
+        delete_feed_balance = _lambda.Function(
+            self,
+            "DeleteFeedBalanceLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.delete_feed_balance.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(delete_feed_balance)
+
         # --- Batch Financial Result Lambdas ---
 
         post_batch_financial_result = _lambda.Function(
@@ -1025,6 +1037,10 @@ class LmjmStack(Stack):
         feed_balances_resource = batch_resource.add_resource("feed-balances")
         add_cognito_method(feed_balances_resource, "POST", apigw.LambdaIntegration(post_feed_balance))
         add_cognito_method(feed_balances_resource, "GET", apigw.LambdaIntegration(get_feed_balances))
+
+        # /pigs/batches/{batch_id}/feed-balances/{balance_sk}
+        feed_balance_resource = feed_balances_resource.add_resource("{balance_sk}")
+        add_cognito_method(feed_balance_resource, "DELETE", apigw.LambdaIntegration(delete_feed_balance))
 
         # /pigs/batches/{batch_id}/financial-results
         financial_results_resource = batch_resource.add_resource("financial-results")

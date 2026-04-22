@@ -288,8 +288,8 @@ def templates_with_match_st(draw: st.DrawFn, initial_weight: int) -> list[FeedCo
             )
         )
 
-    # Sort by sk (lexicographic) to match DynamoDB ScanIndexForward=True ordering
-    templates.sort(key=lambda t: t.sk)
+    # Sort by sequence (int) to match handler's sorted() ordering
+    templates.sort(key=lambda t: t.sequence)
     return templates
 
 

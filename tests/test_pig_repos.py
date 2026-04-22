@@ -528,7 +528,7 @@ def test_medication_shot_repo_list_with_month_filter() -> None:
     repo.put(
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-03-01|med1",
+            sk="MedicationShot|20250301|med1",
             medication_name="Amoxicillin",
             shot_count=10,
             date="2025-03-01",
@@ -537,7 +537,7 @@ def test_medication_shot_repo_list_with_month_filter() -> None:
     repo.put(
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-03-15|med1",
+            sk="MedicationShot|20250315|med1",
             medication_name="Amoxicillin",
             shot_count=8,
             date="2025-03-15",
@@ -546,7 +546,7 @@ def test_medication_shot_repo_list_with_month_filter() -> None:
     repo.put(
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-04-01|med1",
+            sk="MedicationShot|20250401|med1",
             medication_name="Amoxicillin",
             shot_count=5,
             date="2025-04-01",

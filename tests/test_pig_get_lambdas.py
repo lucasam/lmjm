@@ -277,7 +277,7 @@ def _seed_medication_shots(table: Any) -> None:
         table,
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-03-01|med1",
+            sk="MedicationShot|20250301|med1",
             medication_name="Amoxicillin",
             shot_count=10,
             date="2025-03-01",
@@ -287,7 +287,7 @@ def _seed_medication_shots(table: Any) -> None:
         table,
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-03-15|med1",
+            sk="MedicationShot|20250315|med1",
             medication_name="Amoxicillin",
             shot_count=8,
             date="2025-03-15",
@@ -297,7 +297,7 @@ def _seed_medication_shots(table: Any) -> None:
         table,
         MedicationShot(
             pk="batch-1",
-            sk="MedicationShot|2025-04-01|med1",
+            sk="MedicationShot|20250401|med1",
             medication_name="Amoxicillin",
             shot_count=5,
             date="2025-04-01",

@@ -391,6 +391,12 @@ export function listFeedBalances(batchId: string): Promise<FeedBalance[]> {
   return get<FeedBalance[]>(`/pigs/batches/${encodeURIComponent(batchId)}/feed-balances`);
 }
 
+export async function deleteFeedBalance(batchId: string, balanceSk: string): Promise<void> {
+  await fetchWithAuth(`/pigs/batches/${encodeURIComponent(batchId)}/feed-balances/${encodeURIComponent(balanceSk)}`, {
+    method: 'DELETE',
+  });
+}
+
 // --- Fiscal Documents ---
 
 export function listFiscalDocuments(batchId: string): Promise<FiscalDocument[]> {

@@ -19,6 +19,7 @@ from lmjm.model import (
     Medication,
     RawMaterialType,
 )
+from lmjm.model.feed_schedule import FeedScheduleStatus
 from lmjm.repo import (
     BatchRepo,
     FeedScheduleFiscalDocumentRepo,
@@ -113,7 +114,7 @@ def _match_feed_schedule(
     for schedule in schedules:
         if schedule.feed_type != product_code:
             continue
-        if schedule.status != "scheduled":
+        if schedule.status != FeedScheduleStatus.scheduled:
             logger.info("  Skip %s: status=%s", schedule.sk, schedule.status)
             continue
         if schedule.sk in excluded:

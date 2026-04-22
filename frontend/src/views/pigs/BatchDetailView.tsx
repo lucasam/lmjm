@@ -14,6 +14,7 @@ import {
   listMedications,
   createBatchStartSummary,
   listFeedBalances,
+  deleteFeedBalance,
   updateBatch,
   listFeedScheduleFiscalDocuments,
   listRawMaterialTypes,
@@ -229,6 +230,22 @@ export default function BatchDetailView() {
   const feedBalanceCols: Column<FeedBalance>[] = [
     { header: t('pigs.measurementDate'), accessor: (r) => formatDate(r.measurement_date) },
     { header: t('pigs.balanceKg'), accessor: (r) => formatNumber(r.balance_kg) },
+    { header: '', accessor: (r) => (
+      <button
+        type="button"
+        className="btn btn-outline btn-sm"
+        style={{ color: 'var(--error)', borderColor: 'var(--error)' }}
+        onClick={async (e) => {
+          e.stopPropagation();
+          if (window.confirm(t('pigs.confirmDeleteBalance', 'Excluir este balanço de ração?'))) {
+            await deleteFeedBalance(id, r.sk);
+            rBalances();
+          }
+        }}
+      >
+        ✕
+      </button>
+    )},
   ];
 
   const breadcrumbs = [

@@ -7,6 +7,7 @@ from urllib.parse import unquote
 import boto3
 
 from lmjm.model import FeedSchedule
+from lmjm.model.feed_schedule import FeedScheduleStatus
 from lmjm.repo import BatchRepo, FeedScheduleRepo
 from lmjm.util.marshmallow_serializer import serialize_to_dict_list
 from lmjm.util.response import respond
@@ -54,7 +55,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             feed_type=entry_dict.get("feed_type", ""),
             planned_date=entry_dict.get("planned_date", ""),
             expected_amount_kg=int(entry_dict.get("expected_amount_kg", 0)),
-            status=entry_dict.get("status", "scheduled"),
+            status=FeedScheduleStatus(entry_dict.get("status", "scheduled")),
             fulfilled_by=entry_dict.get("fulfilled_by"),
         )
         feed_schedule_repo.put(schedule)

@@ -24,3 +24,6 @@ class FeedBalanceRepo:
             ScanIndexForward=True,
         )
         return load_data_class_from_dict_list(response["Items"], FeedBalance)
+
+    def delete(self, pk: str, sk: str) -> None:
+        self.table.delete_item(Key={"pk": pk, "sk": sk})
