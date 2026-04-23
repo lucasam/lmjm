@@ -481,3 +481,14 @@ export async function generateFeedPlan(batchId: string, params?: GenerateFeedPla
   });
   return response.json() as Promise<FeedConsumptionPlanEntry[]>;
 }
+
+// --- Feed Schedule Suggestions ---
+
+import type { FeedScheduleSuggestionsResponse } from '../types/models';
+
+export async function postFeedScheduleSuggestions(batchId: string): Promise<FeedScheduleSuggestionsResponse> {
+  const response = await fetchWithAuth(`/pigs/batches/${encodeURIComponent(batchId)}/feed-schedule-suggestions`, {
+    method: 'POST',
+  });
+  return response.json() as Promise<FeedScheduleSuggestionsResponse>;
+}

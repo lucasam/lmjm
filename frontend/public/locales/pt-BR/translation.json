@@ -183,6 +183,11 @@
     "supplierName": "Fornecedor",
     "orderNumber": "Pedido",
     "batchPk": "Lote"
+    ,"suggestChanges": "Sugerir Alterações",
+    "suggestChangesLoading": "Analisando...",
+    "suggestChangesError": "Erro ao gerar sugestões. Tente novamente.",
+    "suggestionsTitle": "Sugestões de Alteração",
+    "noSuggestionsNeeded": "Nenhuma alteração necessária — saldos dentro dos limites."
   },
   "errors": {
     "generic": "Ocorreu um erro. Tente novamente.",

@@ -7,6 +7,12 @@ from lmjm.model.feed_consumption_plan import FeedConsumptionPlan
 from lmjm.model.feed_consumption_template import FeedConsumptionTemplate
 from lmjm.model.feed_schedule import FeedSchedule, FeedScheduleStatus
 from lmjm.model.feed_schedule_fiscal_document import FeedScheduleFiscalDocument
+from lmjm.model.feed_schedule_suggestion import (
+    DailyBalance,
+    FeedTypeGroup,
+    Suggestion,
+    SuggestionContext,
+)
 from lmjm.model.feed_truck_arrival import FeedTruckArrival
 from lmjm.model.fiscal_document import FiscalDocument
 from lmjm.model.insemination import Insemination
@@ -23,6 +29,7 @@ __all__ = [
     "Animal",
     "Batch",
     "BatchFinancialResult",
+    "DailyBalance",
     "Diagnostic",
     "FeedBalance",
     "FeedConsumptionPlan",
@@ -30,6 +37,7 @@ __all__ = [
     "FeedSchedule",
     "FeedScheduleStatus",
     "FeedScheduleFiscalDocument",
+    "FeedTypeGroup",
     "FeedTruckArrival",
     "FiscalDocument",
     "Insemination",
@@ -40,5 +48,7 @@ __all__ = [
     "Mortality",
     "PigTruckArrival",
     "RawMaterialType",
+    "Suggestion",
+    "SuggestionContext",
     "Weight",
 ]

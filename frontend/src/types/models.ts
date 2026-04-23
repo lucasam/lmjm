@@ -261,3 +261,15 @@ export interface IntegratorWeeklyData {
   map_1: number;
   map_2: number;
 }
+
+export interface FeedScheduleSuggestion {
+  planned_date: string;
+  feed_description: string;
+  new_planned_date: string;
+  description: string;
+}
+
+export interface FeedScheduleSuggestionsResponse {
+  suggestions: FeedScheduleSuggestion[];
+  message: string;
+}

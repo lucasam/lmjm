@@ -15,6 +15,7 @@ from aws_cdk import aws_cloudfront as cloudfront
 from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_cognito as cognito
 from aws_cdk import aws_dynamodb as dynamodb
+from aws_cdk import aws_iam as iam
 from aws_cdk import aws_lambda as _lambda
 from aws_cdk import aws_route53 as route53
 from aws_cdk import aws_route53_targets as targets
@@ -782,6 +783,26 @@ class LmjmStack(Stack):
         )
         table.grant_read_write_data(post_generate_feed_plan)
 
+        # --- Feed Schedule Suggestions Lambda ---
+
+        post_feed_schedule_suggestions = _lambda.Function(
+            self,
+            "PostFeedScheduleSuggestionsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(90),
+            memory_size=2048,
+            handler="lmjm.post_feed_schedule_suggestions.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(post_feed_schedule_suggestions)
+        post_feed_schedule_suggestions.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["bedrock:InvokeModel"],
+                resources=["*"],
+            )
+        )
+
         # --- Feed Balance Lambdas ---
 
         post_feed_balance = _lambda.Function(
@@ -1032,6 +1053,12 @@ class LmjmStack(Stack):
         # /pigs/batches/{batch_id}/generate-feed-plan
         generate_feed_plan_resource = batch_resource.add_resource("generate-feed-plan")
         add_cognito_method(generate_feed_plan_resource, "POST", apigw.LambdaIntegration(post_generate_feed_plan))
+
+        # /pigs/batches/{batch_id}/feed-schedule-suggestions
+        feed_schedule_suggestions_resource = batch_resource.add_resource("feed-schedule-suggestions")
+        add_cognito_method(
+            feed_schedule_suggestions_resource, "POST", apigw.LambdaIntegration(post_feed_schedule_suggestions)
+        )
 
         # /pigs/batches/{batch_id}/feed-balances
         feed_balances_resource = batch_resource.add_resource("feed-balances")

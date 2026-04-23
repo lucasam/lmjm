@@ -10,6 +10,7 @@ import {
   getFeedSchedule,
   getFeedConsumptionPlan,
   listMortalities,
+  postFeedScheduleSuggestions,
   getModule,
 } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
@@ -23,6 +24,7 @@ import type {
   FeedConsumptionPlanEntry,
   Mortality,
   Module,
+  FeedScheduleSuggestion,
 } from '../../types/models';
 
 interface ForecastRow {
@@ -156,6 +158,27 @@ export default function FeedBalanceForecastView() {
 
   const [includeBalanceDayDelivery, setIncludeBalanceDayDelivery] = useState(false);
 
+  const [suggestions, setSuggestions] = useState<FeedScheduleSuggestion[]>([]);
+  const [suggestionsMessage, setSuggestionsMessage] = useState<string | null>(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+
+  const handleSuggestChanges = async () => {
+    setSuggestionsLoading(true);
+    setSuggestionsError(null);
+    setSuggestions([]);
+    setSuggestionsMessage(null);
+    try {
+      const result = await postFeedScheduleSuggestions(id);
+      setSuggestions(result.suggestions);
+      setSuggestionsMessage(result.message);
+    } catch (err) {
+      setSuggestionsError(t('pigs.suggestChangesError', 'Erro ao gerar sugestões. Tente novamente.'));
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
   const forecastRows = useMemo(
     () => (batch && balances && schedule && plan && mortalities && moduleData
       ? computeForecast(batch, balances, schedule, plan, mortalities, moduleData, includeBalanceDayDelivery)
@@ -249,6 +272,51 @@ export default function FeedBalanceForecastView() {
             </div>
           </>
         )
+      )}
+
+      <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSuggestChanges}
+          disabled={suggestionsLoading || forecastRows.length === 0}
+        >
+          {suggestionsLoading
+            ? t("pigs.suggestChangesLoading", "Analisando...")
+            : t("pigs.suggestChanges", "Sugerir Alterações")}
+        </button>
+        {suggestionsError && (
+          <span style={{ color: "var(--error)", fontSize: "0.85rem" }}>{suggestionsError}</span>
+        )}
+      </div>
+
+      {suggestionsMessage && suggestions.length === 0 && (
+        <div style={{ marginTop: "1rem", padding: "0.75rem", backgroundColor: "#e8f5e9", borderRadius: "6px", fontSize: "0.9rem" }}>
+          {suggestionsMessage}
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3 style={{ marginBottom: "0.5rem" }}>{t("pigs.suggestionsTitle", "Sugestões de Alteração")}</h3>
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("pigs.description", "Descrição")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {suggestions.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.5rem" }}>{suggestionsMessage}</p>
+        </div>
       )}
 
       <div style={{ marginTop: '1.5rem' }}>
