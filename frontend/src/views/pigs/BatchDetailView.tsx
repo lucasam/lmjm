@@ -213,11 +213,22 @@ export default function BatchDetailView() {
     return { totalAnimals, weightedAvg, male: bySex('Male'), female: bySex('Female') };
   }, [pigTrucks]);
 
+  const mortalityCumulative = useMemo(() => {
+    const total = (mortalities ?? []).length;
+    const map = new Map<string, number>();
+    // Data is displayed in descending order (newest first)
+    // First row = total, second row = total-1, etc.
+    (mortalities ?? []).forEach((m, i) => {
+      map.set(m.sk, total - i);
+    });
+    return map;
+  }, [mortalities]);
+
   const mortalityCols: Column<Mortality>[] = [
-    { header: t('pigs.mortalityDate'), accessor: (r) => formatDate(r.mortality_date) },
+    { header: t('pigs.mortalityDate'), accessor: (r) => `${formatDate(r.mortality_date)} (${mortalityCumulative.get(r.sk) ?? '—'})` },
     { header: t('cattle.sex'), accessor: (r) => r.sex === 'Male' ? t('pigs.male') : t('pigs.female') },
     { header: t('pigs.origin'), accessor: (r) => r.origin },
-    { header: t('pigs.deathReason'), accessor: (r) => r.death_reason },
+    { header: t('pigs.deathReason'), accessor: (r) => r.death_reason_description ? `${r.death_reason} — ${r.death_reason_description}` : r.death_reason },
     { header: t('pigs.reportedBy'), accessor: (r) => r.reported_by },
   ];
 

@@ -28,6 +28,7 @@ class PostMortalityRequest:
     origin: str
     death_reason: str
     reported_by: str
+    death_reason_description: str = ""
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -72,6 +73,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         sex=request.sex,
         origin=request.origin,
         death_reason=request.death_reason,
+        death_reason_description=request.death_reason_description,
         reported_by=request.reported_by,
     )
     mortality_repo.put(mortality)

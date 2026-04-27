@@ -69,6 +69,7 @@ export interface PostMortalityRequest {
   sex: 'Male' | 'Female';
   origin: string;
   death_reason: string;
+  death_reason_description: string;
   reported_by: string;
 }
 

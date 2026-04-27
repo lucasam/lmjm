@@ -9,4 +9,5 @@ class Mortality:
     sex: str = ""
     origin: str = ""
     death_reason: str = ""
+    death_reason_description: str = ""
     reported_by: str = ""

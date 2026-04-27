@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthProvider';
 import { postMortality } from '../../api/client';
+import { DEATH_REASONS } from '../../constants/deathReasons';
 
 interface MortalityFormProps {
   batchId: string;
@@ -15,11 +16,13 @@ export default function MortalityForm({ batchId, onClose, onSuccess }: Mortality
   const [mortalityDate, setMortalityDate] = useState('');
   const [sex, setSex] = useState<'Male' | 'Female'>('Male');
   const [origin, setOrigin] = useState('');
-  const [deathReason, setDeathReason] = useState('');
+  const [deathReasonCode, setDeathReasonCode] = useState('');
   const [reportedBy, setReportedBy] = useState(user?.name ?? user?.email ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const selectedReason = DEATH_REASONS.find((r) => r.code === deathReasonCode);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +33,8 @@ export default function MortalityForm({ batchId, onClose, onSuccess }: Mortality
         mortality_date: mortalityDate.replace(/-/g, ''),
         sex,
         origin,
-        death_reason: deathReason,
+        death_reason: deathReasonCode,
+        death_reason_description: selectedReason?.description ?? '',
         reported_by: reportedBy,
       });
       setSuccess(true);
@@ -71,7 +75,12 @@ export default function MortalityForm({ batchId, onClose, onSuccess }: Mortality
 
           <label className="form-label">
             {t('pigs.deathReason')} *
-            <input type="text" required value={deathReason} onChange={(e) => setDeathReason(e.target.value)} className="form-input" />
+            <select required value={deathReasonCode} onChange={(e) => setDeathReasonCode(e.target.value)} className="form-input">
+              <option value="">—</option>
+              {DEATH_REASONS.map((r) => (
+                <option key={r.code} value={r.code}>{r.code} — {r.description}</option>
+              ))}
+            </select>
           </label>
 
           <label className="form-label">

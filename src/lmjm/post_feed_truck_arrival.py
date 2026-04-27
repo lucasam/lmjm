@@ -38,6 +38,7 @@ class PostFeedTruckArrivalRequest:
     actual_amount_kg: int
     feed_type: str
     feed_schedule_id: Optional[str] = None
+    fiscal_document_sk: Optional[str] = None
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -95,9 +96,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     feed_truck_arrival_repo.put(arrival)
 
     # Update FeedScheduleFiscalDocument status to "used" if pending
-    fiscal_doc = feed_schedule_fiscal_document_repo.get(batch_id, request.fiscal_document_number)
-    if fiscal_doc and fiscal_doc.status == "pending":
-        feed_schedule_fiscal_document_repo.update_status(fiscal_doc.pk, fiscal_doc.sk, "used")
+    fiscal_doc = None
+    if request.fiscal_document_sk:
+        response = table.get_item(Key={"pk": batch_id, "sk": request.fiscal_document_sk})
+        item = response.get("Item")
+        if item and item.get("status") == "pending":
+            feed_schedule_fiscal_document_repo.update_status(batch_id, request.fiscal_document_sk, "used")
+    else:
+        fiscal_doc = feed_schedule_fiscal_document_repo.get(batch_id, request.fiscal_document_number)
+        if fiscal_doc and fiscal_doc.status == "pending":
+            feed_schedule_fiscal_document_repo.update_status(fiscal_doc.pk, fiscal_doc.sk, "used")
 
     # Update FeedSchedule status to "delivered" if feed_schedule_id provided
     if request.feed_schedule_id:

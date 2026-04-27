@@ -28,6 +28,7 @@ export default function FeedTruckArrivalForm({
   const [feedType, setFeedType] = useState('');
   const [feedDescription, setFeedDescription] = useState('');
   const [feedScheduleId, setFeedScheduleId] = useState('');
+  const [fiscalDocSk, setFiscalDocSk] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -52,6 +53,7 @@ export default function FeedTruckArrivalForm({
     if (!docSk) return;
     const doc = pendingDocs.find((d) => d.sk === docSk);
     if (!doc) return;
+    setFiscalDocSk(doc.sk);
     setReceiveDate(`${doc.issue_date}T00:00`);
     setFiscalDocumentNumber(doc.fiscal_document_number);
     setActualAmountKg(String(doc.actual_amount_kg));
@@ -71,6 +73,7 @@ export default function FeedTruckArrivalForm({
         feed_type: feedType,
         feed_description: feedDescription,
         ...(feedScheduleId ? { feed_schedule_id: feedScheduleId } : {}),
+        ...(fiscalDocSk ? { fiscal_document_sk: fiscalDocSk } : {}),
       });
       setSuccess(true);
       setTimeout(onSuccess, 800);
