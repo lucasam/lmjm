@@ -10,6 +10,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import DataTable, { type Column } from '../../components/DataTable';
 import WeightForm from './WeightForm';
+import DiagnosticForm from './DiagnosticForm';
 import type { Weight } from '../../types/models';
 
 export default function AnimalDetailView() {
@@ -17,6 +18,7 @@ export default function AnimalDetailView() {
   const { earTag } = useParams<{ earTag: string }>();
   const { user, logout } = useAuth();
   const [showWeightForm, setShowWeightForm] = useState(false);
+  const [showDiagnosticForm, setShowDiagnosticForm] = useState(false);
 
   const tag = earTag ?? '';
 
@@ -115,6 +117,11 @@ export default function AnimalDetailView() {
             <button type="button" className="btn btn-primary" onClick={() => setShowWeightForm(true)}>
               {t('cattle.newWeight')}
             </button>
+            {animal.inseminated && (
+              <button type="button" className="btn btn-primary" onClick={() => setShowDiagnosticForm(true)}>
+                {t('cattle.newDiagnostic', 'Diagnóstico')}
+              </button>
+            )}
           </div>
 
           {/* Weight chart — last 2 years */}
@@ -140,6 +147,14 @@ export default function AnimalDetailView() {
           earTag={tag}
           onClose={() => setShowWeightForm(false)}
           onSuccess={handleWeightSuccess}
+        />
+      )}
+
+      {showDiagnosticForm && (
+        <DiagnosticForm
+          earTag={tag}
+          onClose={() => setShowDiagnosticForm(false)}
+          onSuccess={() => { setShowDiagnosticForm(false); refetchAnimal(); }}
         />
       )}
     </Layout>
