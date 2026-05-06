@@ -16,6 +16,8 @@ from lmjm.repo.medication_shot_repo import MedicationShotRepo
 from lmjm.repo.module_repo import ModuleRepo
 from lmjm.repo.mortality_repo import MortalityRepo
 from lmjm.repo.pig_truck_arrival_repo import PigTruckArrivalRepo
+from lmjm.repo.procedure_action_repo import ProcedureActionRepo
+from lmjm.repo.procedure_repo import ProcedureRepo
 from lmjm.repo.raw_material_type_repo import RawMaterialTypeRepo
 from lmjm.repo.weight_repo import WeightRepo
 
@@ -38,6 +40,8 @@ __all__ = [
     "ModuleRepo",
     "MortalityRepo",
     "PigTruckArrivalRepo",
+    "ProcedureActionRepo",
+    "ProcedureRepo",
     "RawMaterialTypeRepo",
     "WeightRepo",
 ]

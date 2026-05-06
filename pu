@@ -35,6 +35,13 @@ case "$1" in
     test)
         tox -e test
         ;;
+    deploy)
+        cd frontend
+        npm run build
+        cd ..
+        rm -rf cdk.out
+        cdk deploy LmjmStack --require-approval never
+        ;;
     test-integ)
         export PU_INTEG_TESTS_TARGET_ACCOUNT_ID="$2"
         tox -e test_integ

@@ -19,6 +19,9 @@ import type {
   BatchFinancialResult,
   IntegratorWeeklyData,
   FeedConsumptionTemplate,
+  Procedure,
+  ProcedureDetail,
+  ConfirmProcedureResult,
 } from '../types/models';
 
 // Request types for POST/PUT operations
@@ -492,4 +495,47 @@ export async function postFeedScheduleSuggestions(batchId: string): Promise<Feed
     method: 'POST',
   });
   return response.json() as Promise<FeedScheduleSuggestionsResponse>;
+}
+
+// --- Cattle Procedures ---
+
+export async function createProcedure(data: { procedure_date: string }): Promise<Procedure> {
+  const response = await fetchWithAuth('/cattle/procedures', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json() as Promise<Procedure>;
+}
+
+export function listProcedures(): Promise<Procedure[]> {
+  return get<Procedure[]>('/cattle/procedures');
+}
+
+export function getProcedure(procedureId: string): Promise<ProcedureDetail> {
+  return get<ProcedureDetail>(`/cattle/procedures/${encodeURIComponent(procedureId)}`);
+}
+
+export function postProcedureAction(procedureId: string, data: Record<string, unknown>): Promise<void> {
+  return post(`/cattle/procedures/${encodeURIComponent(procedureId)}/actions`, data);
+}
+
+export async function deleteProcedureAction(procedureId: string, actionSk: string): Promise<void> {
+  // Extract just the UUID from "Action|{uuid}" to avoid pipe character in URL path
+  const actionId = actionSk.startsWith('Action|') ? actionSk.replace('Action|', '') : actionSk;
+  await fetchWithAuth(`/cattle/procedures/${encodeURIComponent(procedureId)}/actions/${encodeURIComponent(actionId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function confirmProcedure(procedureId: string): Promise<ConfirmProcedureResult> {
+  const response = await fetchWithAuth(`/cattle/procedures/${encodeURIComponent(procedureId)}/confirm`, {
+    method: 'POST',
+  });
+  return response.json() as Promise<ConfirmProcedureResult>;
+}
+
+export async function cancelProcedure(procedureId: string): Promise<void> {
+  await fetchWithAuth(`/cattle/procedures/${encodeURIComponent(procedureId)}/cancel`, {
+    method: 'POST',
+  });
 }

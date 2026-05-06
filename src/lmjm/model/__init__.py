@@ -22,6 +22,8 @@ from lmjm.model.medication_shot import MedicationShot
 from lmjm.model.module import Module
 from lmjm.model.mortality import Mortality
 from lmjm.model.pig_truck_arrival import PigTruckArrival
+from lmjm.model.procedure import Procedure, ProcedureStatus
+from lmjm.model.procedure_action import ProcedureAction, ProcedureActionType
 from lmjm.model.raw_material_type import RawMaterialType
 from lmjm.model.weight import Weight
 
@@ -47,6 +49,10 @@ __all__ = [
     "Module",
     "Mortality",
     "PigTruckArrival",
+    "Procedure",
+    "ProcedureAction",
+    "ProcedureActionType",
+    "ProcedureStatus",
     "RawMaterialType",
     "Suggestion",
     "SuggestionContext",

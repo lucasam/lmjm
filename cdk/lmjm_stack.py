@@ -451,6 +451,119 @@ class LmjmStack(Stack):
         add_cognito_method(cattle_pesos_resource, "GET", apigw.LambdaIntegration(get_weights))
         add_cognito_method(cattle_pesos_resource, "POST", apigw.LambdaIntegration(post_weight))
 
+        # --- Cattle Procedure Lambdas ---
+
+        post_procedure = _lambda.Function(
+            self,
+            "PostProcedureLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_procedure.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_procedure)
+
+        get_procedures = _lambda.Function(
+            self,
+            "GetProceduresLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_procedures.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_procedures)
+
+        get_procedure = _lambda.Function(
+            self,
+            "GetProcedureLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_procedure.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_data(get_procedure)
+
+        post_procedure_action = _lambda.Function(
+            self,
+            "PostProcedureActionLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_procedure_action.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_procedure_action)
+
+        delete_procedure_action = _lambda.Function(
+            self,
+            "DeleteProcedureActionLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.delete_procedure_action.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(delete_procedure_action)
+
+        post_procedure_confirm = _lambda.Function(
+            self,
+            "PostProcedureConfirmLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(60),
+            memory_size=2048,
+            handler="lmjm.post_procedure_confirm.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_procedure_confirm)
+
+        post_procedure_cancel = _lambda.Function(
+            self,
+            "PostProcedureCancelLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_procedure_cancel.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_procedure_cancel)
+
+        # --- Cattle Procedure API Gateway Routes ---
+
+        # /cattle/procedures
+        cattle_procedures_resource = cattle_resource.add_resource("procedures")
+        add_cognito_method(cattle_procedures_resource, "POST", apigw.LambdaIntegration(post_procedure))
+        add_cognito_method(cattle_procedures_resource, "GET", apigw.LambdaIntegration(get_procedures))
+
+        # /cattle/procedures/{procedure_id}
+        cattle_procedure_resource = cattle_procedures_resource.add_resource("{procedure_id}")
+        add_cognito_method(cattle_procedure_resource, "GET", apigw.LambdaIntegration(get_procedure))
+
+        # /cattle/procedures/{procedure_id}/actions
+        cattle_procedure_actions_resource = cattle_procedure_resource.add_resource("actions")
+        add_cognito_method(cattle_procedure_actions_resource, "POST", apigw.LambdaIntegration(post_procedure_action))
+
+        # /cattle/procedures/{procedure_id}/actions/{action_sk}
+        cattle_procedure_action_resource = cattle_procedure_actions_resource.add_resource("{action_sk}")
+        add_cognito_method(cattle_procedure_action_resource, "DELETE", apigw.LambdaIntegration(delete_procedure_action))
+
+        # /cattle/procedures/{procedure_id}/confirm
+        cattle_procedure_confirm_resource = cattle_procedure_resource.add_resource("confirm")
+        add_cognito_method(cattle_procedure_confirm_resource, "POST", apigw.LambdaIntegration(post_procedure_confirm))
+
+        # /cattle/procedures/{procedure_id}/cancel
+        cattle_procedure_cancel_resource = cattle_procedure_resource.add_resource("cancel")
+        add_cognito_method(cattle_procedure_cancel_resource, "POST", apigw.LambdaIntegration(post_procedure_cancel))
+
         # --- Pig Module Lambdas ---
 
         get_modules = _lambda.Function(

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { listCattleAnimals } from '../../api/client';
+import { listCattleAnimals, listProcedures } from '../../api/client';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -40,7 +40,13 @@ export default function AnimalListView() {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
   const fetchAnimals = useCallback(() => listCattleAnimals(), []);
+  const fetchProcedures = useCallback(() => listProcedures(), []);
   const { data: animals, loading, error, refetch } = useApi(fetchAnimals);
+  const { data: procedures } = useApi(fetchProcedures);
+
+  const recentProcedures = useMemo(() => {
+    return (procedures ?? []).slice(0, 3);
+  }, [procedures]);
 
   const activeAnimals = useMemo(() => {
     const filtered = (animals ?? []).filter((a) => a.status === 'Ativa');
@@ -111,6 +117,31 @@ export default function AnimalListView() {
       onLogout={logout}
     >
       <h1 className="page-title">{t('cattle.animalList')}</h1>
+
+      {/* Procedure section */}
+      <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-md)' }}>
+        <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/procedures/new')}>
+          {t('cattle.newProcedure', 'Novo Manejo')}
+        </button>
+        {recentProcedures.length > 0 && recentProcedures.map((proc) => {
+          const procId = proc.pk.replace('Procedure|', '');
+          const dateFormatted = proc.procedure_date ? `${proc.procedure_date.substring(8, 10)}/${proc.procedure_date.substring(5, 7)}` : '—';
+          return (
+            <button
+              key={proc.pk}
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: '0.85rem' }}
+              onClick={() => navigate(`/cattle/procedures/${encodeURIComponent(procId)}`)}
+            >
+              {dateFormatted} — {proc.status === 'confirmed' ? '✓' : '○'} ({proc.action_count ?? 0})
+            </button>
+          );
+        })}
+        <button type="button" className="btn btn-outline" style={{ fontSize: '0.85rem' }} onClick={() => navigate('/cattle/procedures')}>
+          {t('cattle.viewAllProcedures', 'Ver Todos →')}
+        </button>
+      </div>
 
       {!loading && !error && (
         <div style={{ marginBottom: 'var(--space-md)' }}>

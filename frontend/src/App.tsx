@@ -6,6 +6,9 @@ import LoginView from './views/LoginView';
 import SpeciesSelectionView from './views/SpeciesSelectionView';
 import AnimalListView from './views/cattle/AnimalListView';
 import AnimalDetailView from './views/cattle/AnimalDetailView';
+import ProcedureListView from './views/cattle/ProcedureListView';
+import ProcedureCreateView from './views/cattle/ProcedureCreateView';
+import ProcedureDetailView from './views/cattle/ProcedureDetailView';
 import PigDashboard from './views/pigs/PigDashboard';
 import ModuleDetailView from './views/pigs/ModuleDetailView';
 import BatchDetailView from './views/pigs/BatchDetailView';
@@ -83,6 +86,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AnimalListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/procedures"
+        element={
+          <ProtectedRoute>
+            <ProcedureListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/procedures/new"
+        element={
+          <ProtectedRoute>
+            <ProcedureCreateView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/procedures/:procedureId"
+        element={
+          <ProtectedRoute>
+            <ProcedureDetailView />
           </ProtectedRoute>
         }
       />

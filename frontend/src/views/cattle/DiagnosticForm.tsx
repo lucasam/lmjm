@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { postDiagnostic } from '../../api/client';
+import { formatDate } from '../../i18n';
+import type { Insemination } from '../../types/models';
 
 interface DiagnosticFormProps {
   earTag: string;
+  insemination: Insemination | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function DiagnosticForm({ earTag, onClose, onSuccess }: DiagnosticFormProps) {
+export default function DiagnosticForm({ earTag, insemination, onClose, onSuccess }: DiagnosticFormProps) {
   const { t } = useTranslation();
   const [diagnosticDate, setDiagnosticDate] = useState('');
   const [pregnant, setPregnant] = useState(true);
@@ -45,6 +48,18 @@ export default function DiagnosticForm({ earTag, onClose, onSuccess }: Diagnosti
 
         {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
         {error && <div className="alert alert-error">{error}</div>}
+
+        {insemination && (
+          <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-md)', fontSize: '0.9rem' }}>
+            <strong>{t('cattle.relatedInsemination', 'Inseminação Relacionada')}</strong>
+            <div style={{ marginTop: '0.25rem' }}>
+              {t('cattle.inseminationDate', 'Data')}: {formatDate(insemination.insemination_date)}
+            </div>
+            <div>
+              {t('cattle.semen', 'Sêmen')}: {insemination.semen}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <label className="form-label">

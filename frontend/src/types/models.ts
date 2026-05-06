@@ -274,3 +274,61 @@ export interface FeedScheduleSuggestionsResponse {
   suggestions: FeedScheduleSuggestion[];
   message: string;
 }
+
+export type ProcedureStatus = 'open' | 'confirmed' | 'cancelled';
+
+export type ProcedureActionType = 'weight' | 'insemination' | 'diagnostic' | 'observation' | 'inspected' | 'implant';
+
+export interface Procedure {
+  pk: string;
+  procedure_date: string;
+  status: ProcedureStatus;
+  action_count?: number;
+  applied_count?: number;
+  failed_count?: number;
+}
+
+export interface ProcedureAction {
+  pk: string;
+  sk: string;
+  action_type: ProcedureActionType;
+  ear_tag: string;
+  weighing_date?: string;
+  weight_kg?: number;
+  insemination_date?: string;
+  semen?: string;
+  diagnostic_date?: string;
+  pregnant?: boolean;
+  tags?: string;
+  note?: string;
+}
+
+export interface ProcedureSummary {
+  weight_count: number;
+  insemination_count: number;
+  diagnostic_count: number;
+  diagnostic_confirmed: number;
+  diagnostic_failed: number;
+  prenhez_rate: number | null;
+  prenhez_confirmed: number;
+  prenhez_total: number;
+  observation_count: number;
+  inspected_count: number;
+  implant_count: number;
+  total_actions: number;
+  processed_animal_count: number;
+  animals: { ear_tag: string; actions: ProcedureAction[] }[];
+}
+
+export interface ProcedureDetail {
+  procedure: Procedure;
+  actions: ProcedureAction[];
+  summary: ProcedureSummary;
+}
+
+export interface ConfirmProcedureResult {
+  status: string;
+  applied_count: number;
+  failed_count: number;
+  failures: { ear_tag: string; action_type: string; reason: string }[];
+}

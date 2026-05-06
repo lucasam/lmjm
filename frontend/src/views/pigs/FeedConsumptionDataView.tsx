@@ -34,6 +34,9 @@ interface ConsumptionRow {
   dailyPerAnimal: number;
   plannedDailyPerAnimal: number | null;
   expectedPigletWeight: number | null;
+  totalFeedReceived: number;
+  balanceKg: number;
+  totalFeedConsumedCalc: number;
 }
 
 function getCumulativeDeathsUpTo(mortalities: Mortality[], dateStr: string): number {
@@ -91,6 +94,15 @@ function computeConsumptionData(
 
   const rows: ConsumptionRow[] = [];
   let cumulativeConsumed = 0;
+  let cumulativeFeedReceived = 0;
+
+  // Count feed received up to the first balance (before the loop starts)
+  const firstBalanceDatetime = sortedBalances[0].measurement_date;
+  for (const a of arrivals) {
+    if (a.receive_date <= firstBalanceDatetime) {
+      cumulativeFeedReceived += a.actual_amount_kg;
+    }
+  }
 
   for (let i = 1; i < sortedBalances.length; i++) {
     const prev = sortedBalances[i - 1];
@@ -105,6 +117,7 @@ function computeConsumptionData(
     for (const a of periodArrivals) {
       deliveredInPeriod += a.actual_amount_kg;
     }
+    cumulativeFeedReceived += deliveredInPeriod;
 
     const totalConsumed = prev.balance_kg + deliveredInPeriod - curr.balance_kg;
     cumulativeConsumed += totalConsumed;
@@ -165,6 +178,9 @@ function computeConsumptionData(
       dailyPerAnimal,
       plannedDailyPerAnimal,
       expectedPigletWeight,
+      totalFeedReceived: cumulativeFeedReceived,
+      balanceKg: curr.balance_kg,
+      totalFeedConsumedCalc: cumulativeFeedReceived - curr.balance_kg,
     });
   }
 
@@ -335,6 +351,9 @@ export default function FeedConsumptionDataView() {
                     <th>{t('pigs.expectedConsumptionPerPig', 'Esperado Acum./Animal (kg)')}</th>
                     <th>{t('pigs.dailyPerAnimal', 'Diário/Animal (kg)')}</th>
                     <th>{t('pigs.plannedDailyPerAnimal', 'Planejado Diário/Animal (kg)')}</th>
+                    <th>{t('pigs.totalFeedReceived', 'Total Recebido (kg)')}</th>
+                    <th>{t('pigs.balanceKg', 'Balanço (kg)')}</th>
+                    <th>{t('pigs.totalFeedConsumedCalc', 'Consumo Total (kg)')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -365,6 +384,9 @@ export default function FeedConsumptionDataView() {
                         <td>
                           {row.plannedDailyPerAnimal != null ? formatNumber(row.plannedDailyPerAnimal, 3) : '—'}
                         </td>
+                        <td>{formatNumber(row.totalFeedReceived, 1)}</td>
+                        <td>{formatNumber(row.balanceKg, 1)}</td>
+                        <td>{formatNumber(row.totalFeedConsumedCalc, 1)}</td>
                       </tr>
                     );
                   })}

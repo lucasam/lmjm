@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { getCattleAnimal, listWeights } from '../../api/client';
+import { getCattleAnimal, listWeights, listInseminations } from '../../api/client';
 import { formatDate } from '../../i18n';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -24,9 +24,16 @@ export default function AnimalDetailView() {
 
   const fetchAnimal = useCallback(() => getCattleAnimal(tag), [tag]);
   const fetchWeights = useCallback(() => listWeights(tag), [tag]);
+  const fetchInseminations = useCallback(() => listInseminations(tag), [tag]);
 
   const { data: animal, loading: loadingAnimal, error: errorAnimal, refetch: refetchAnimal } = useApi(fetchAnimal);
   const { data: weights, loading: loadingWeights, error: errorWeights, refetch: refetchWeights } = useApi(fetchWeights);
+  const { data: inseminations } = useApi(fetchInseminations);
+
+  const latestInsemination = useMemo(() => {
+    if (!inseminations || inseminations.length === 0) return null;
+    return [...inseminations].sort((a, b) => b.insemination_date.localeCompare(a.insemination_date))[0];
+  }, [inseminations]);
 
   const loading = loadingAnimal || loadingWeights;
   const error = errorAnimal || errorWeights;
@@ -153,6 +160,7 @@ export default function AnimalDetailView() {
       {showDiagnosticForm && (
         <DiagnosticForm
           earTag={tag}
+          insemination={latestInsemination}
           onClose={() => setShowDiagnosticForm(false)}
           onSuccess={() => { setShowDiagnosticForm(false); refetchAnimal(); }}
         />

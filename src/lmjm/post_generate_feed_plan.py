@@ -73,7 +73,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     new_plans: list[FeedConsumptionPlan] = []
 
     for j, template in enumerate(templates[start_index:], start=1):
-        plan_date = receive_date + timedelta(days=j)
+        plan_date = receive_date + timedelta(days=j - 1)
         plan = FeedConsumptionPlan(
             pk=batch_id,
             sk=f"FeedConsumptionPlan|{j}",
