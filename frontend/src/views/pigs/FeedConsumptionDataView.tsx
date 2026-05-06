@@ -128,8 +128,8 @@ function computeConsumptionData(
     const deaths = getCumulativeDeathsUpTo(mortalities, currDatetime);
     const liveAnimals = Math.max(1, totalAnimals - deaths);
 
-    // Change 1: consumptionPerPig is cumulative total up to date / liveAnimals
-    const consumptionPerPig = cumulativeConsumed / liveAnimals;
+    // consumptionPerPig is total feed consumed (received - balance) / liveAnimals
+    const consumptionPerPig = liveAnimals > 0 ? (cumulativeFeedReceived - curr.balance_kg) / liveAnimals : 0;
     const dailyPerAnimal = totalConsumed / (liveAnimals * days);
 
     const currDateOnly = currDatetime.substring(0, 10);
@@ -338,55 +338,76 @@ export default function FeedConsumptionDataView() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>{t('pigs.period', 'Período')}</th>
-                    {/* Change 4: expectedPigletWeight as second column */}
-                    <th>{t('pigs.expectedPigletWeight', 'Peso Esperado (kg)')}</th>
-                    <th>{t('pigs.daysLabel', 'Dias')}</th>
-                    {/* Change 2: liveAnimals before totalConsumed */}
-                    <th>{t('pigs.liveAnimals', 'Animais Vivos')}</th>
-                    <th>{t('pigs.totalConsumed', 'Total Consumido (kg)')}</th>
-                    {/* Change 1: consumptionPerPig is now cumulative */}
-                    <th>{t('pigs.consumptionPerPig', 'Consumo Acum./Animal (kg)')}</th>
-                    {/* Change 3: expected cumulative consumption per pig */}
-                    <th>{t('pigs.expectedConsumptionPerPig', 'Esperado Acum./Animal (kg)')}</th>
-                    <th>{t('pigs.dailyPerAnimal', 'Diário/Animal (kg)')}</th>
-                    <th>{t('pigs.plannedDailyPerAnimal', 'Planejado Diário/Animal (kg)')}</th>
-                    <th>{t('pigs.totalFeedReceived', 'Total Recebido (kg)')}</th>
-                    <th>{t('pigs.balanceKg', 'Balanço (kg)')}</th>
-                    <th>{t('pigs.totalFeedConsumedCalc', 'Consumo Total (kg)')}</th>
+                    <th colSpan={4}></th>
+                    <th colSpan={4} style={{ textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>Totais</th>
+                    <th colSpan={2} style={{ textAlign: 'center', borderBottom: '2px solid var(--accent, #f57c00)' }}>Período</th>
+                  </tr>
+                  <tr>
+                    {/* Group 1: no name */}
+                    <th>Período</th>
+                    <th>Peso Esp.</th>
+                    <th>Dias</th>
+                    <th>Vivos</th>
+                    {/* Group 2: Totais */}
+                    <th>Recebido</th>
+                    <th>Saldo</th>
+                    <th>Consumo</th>
+                    <th>Consumo/Animal (Esp/Real)</th>
+                    {/* Group 3: Período */}
+                    <th>Consumido</th>
+                    <th>Diário (Esp/Real)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, i) => {
-                    const deviation = row.plannedDailyPerAnimal != null
-                      ? row.dailyPerAnimal - row.plannedDailyPerAnimal
-                      : null;
-                    const deviationColor = deviation != null
-                      ? (Math.abs(deviation) > row.plannedDailyPerAnimal! * 0.1 ? '#e65100' : undefined)
-                      : undefined;
 
                     return (
                       <tr key={i}>
+                        {/* Group 1 */}
                         <td>{formatDate(row.periodStart)} – {formatDate(row.periodEnd)}</td>
-                        <td>
-                          {row.expectedPigletWeight != null ? formatNumber(row.expectedPigletWeight, 1) : '—'}
-                        </td>
+                        <td>{row.expectedPigletWeight != null ? formatNumber(row.expectedPigletWeight, 1) : '—'}</td>
                         <td>{row.days}</td>
                         <td>{row.liveAnimals}</td>
-                        <td>{formatNumber(row.totalConsumed, 1)}</td>
-                        <td>{formatNumber(row.consumptionPerPig, 2)}</td>
-                        <td>
-                          {row.expectedConsumptionPerPig != null ? formatNumber(row.expectedConsumptionPerPig, 2) : '—'}
-                        </td>
-                        <td style={{ color: deviationColor }}>
-                          {formatNumber(row.dailyPerAnimal, 3)}
-                        </td>
-                        <td>
-                          {row.plannedDailyPerAnimal != null ? formatNumber(row.plannedDailyPerAnimal, 3) : '—'}
-                        </td>
+                        {/* Group 2: Totais */}
                         <td>{formatNumber(row.totalFeedReceived, 1)}</td>
                         <td>{formatNumber(row.balanceKg, 1)}</td>
                         <td>{formatNumber(row.totalFeedConsumedCalc, 1)}</td>
+                        <td>
+                          {(() => {
+                            const esp = row.expectedConsumptionPerPig;
+                            const real = row.consumptionPerPig;
+                            if (esp == null) return '—';
+                            const diff = real - esp;
+                            const diffColor = diff > 0 ? '#e65100' : diff < 0 ? '#1565c0' : undefined;
+                            const diffSign = diff > 0 ? '+' : '';
+                            return (
+                              <>
+                                {formatNumber(esp, 2)} / {formatNumber(real, 2)}
+                                {' '}
+                                <span style={{ color: diffColor }}>({diffSign}{formatNumber(diff, 2)})</span>
+                              </>
+                            );
+                          })()}
+                        </td>
+                        {/* Group 3: Período */}
+                        <td>{formatNumber(row.totalConsumed, 1)}</td>
+                        <td>
+                          {(() => {
+                            const esp = row.plannedDailyPerAnimal;
+                            const real = row.dailyPerAnimal;
+                            if (esp == null) return formatNumber(real, 3);
+                            const diff = real - esp;
+                            const diffColor = diff > 0 ? '#e65100' : diff < 0 ? '#1565c0' : undefined;
+                            const diffSign = diff > 0 ? '+' : '';
+                            return (
+                              <>
+                                {formatNumber(esp, 3)} / {formatNumber(real, 3)}
+                                {' '}
+                                <span style={{ color: diffColor }}>({diffSign}{formatNumber(diff, 3)})</span>
+                              </>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     );
                   })}
