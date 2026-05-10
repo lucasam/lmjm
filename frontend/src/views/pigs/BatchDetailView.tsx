@@ -174,10 +174,15 @@ export default function BatchDetailView() {
 
   const feedTruckCols: Column<FeedTruckArrival & { cumulativeAmountKg: number }>[] = [
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
+    { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
     { header: t('pigs.feedType'), accessor: (r) => `${r.feed_type} — ${r.feed_description || getFeedTypeDescription(r.feed_type)}` },
     { header: t('pigs.actualAmountKg'), accessor: (r) => formatNumber(r.actual_amount_kg) },
-    { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
     { header: 'Acumulado (kg)', accessor: (r) => formatNumber(r.cumulativeAmountKg) },
+    { header: t('pigs.scheduledDate', 'Agendamento'), accessor: (r) => {
+      if (!r.feed_schedule_id) return '—';
+      const matched = (schedule ?? []).find(s => s.sk === r.feed_schedule_id);
+      return matched ? formatDate(matched.planned_date) : '—';
+    }},
   ];
 
   const pigTruckCols: Column<PigTruckArrival>[] = [
