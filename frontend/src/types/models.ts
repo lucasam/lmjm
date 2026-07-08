@@ -132,6 +132,8 @@ export interface FiscalDocument {
   product_description: string;
   supplier_name: string;
   order_number: string;
+  /** True when a feed truck arrival already references this document (not deletable). */
+  is_converted?: boolean;
 }
 
 export interface FeedScheduleFiscalDocument {

@@ -1,6 +1,16 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import {
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
 import { listIntegratorWeeklyData, postIntegratorWeeklyData } from '../../api/client';
@@ -157,6 +167,37 @@ export default function IntegratorWeeklyDataView() {
     { header: <>MAP<br />≤2 origens</>, accessor: (r) => formatNumber(r.map_2, 4) },
   ];
 
+  // Prepare chart data sorted by validity_end ascending
+  const chartData = useMemo(() => {
+    if (!records || records.length === 0) return [];
+    return [...records]
+      .sort((a, b) => a.validity_end.localeCompare(b.validity_end))
+      .map((r) => ({
+        validity_end: formatDate(r.validity_end),
+        cap_1: r.cap_1,
+        avg_piglet_weight: r.avg_piglet_weight,
+        avg_slaughter_weight: r.avg_slaughter_weight,
+      }));
+  }, [records]);
+
+  // Compute Y-axis domains: min - 10% range, max + 10% range for each series
+  const chartDomains = useMemo(() => {
+    if (chartData.length === 0) return { cap: [0, 1], piglet: [0, 1], slaughter: [0, 1] };
+
+    const computeDomain = (values: number[]): [number, number] => {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || Math.abs(max) * 0.1 || 1;
+      return [min - range * 0.1, max + range * 0.1];
+    };
+
+    return {
+      cap: computeDomain(chartData.map((d) => d.cap_1)),
+      piglet: computeDomain(chartData.map((d) => d.avg_piglet_weight)),
+      slaughter: computeDomain(chartData.map((d) => d.avg_slaughter_weight)),
+    };
+  }, [chartData]);
+
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
@@ -183,6 +224,84 @@ export default function IntegratorWeeklyDataView() {
           keyExtractor={(r) => r.sk}
           onRowClick={handleRowClick}
         />
+      )}
+
+      {/* Correlation Chart: CAP_1 vs Avg Piglet Weight vs Avg Slaughter Weight */}
+      {!loading && !error && chartData.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+            {t('pigs.iwdCorrelationChart', 'Correlação: CAP₁ × Peso Leitão × Peso Abate')}
+          </h2>
+          <ResponsiveContainer width="100%" height={360}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 80, left: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="validity_end"
+                tick={{ fontSize: 11 }}
+                padding={{ left: 20, right: 20 }}
+                label={{ value: 'Fim Vigência', position: 'insideBottom', offset: -10, fontSize: 12 }}
+              />
+              {/* Y-axis left: CAP_1 */}
+              <YAxis
+                yAxisId="cap"
+                orientation="left"
+                domain={chartDomains.cap}
+                tick={{ fontSize: 11 }}
+                label={{ value: 'CAP₁', angle: -90, position: 'insideLeft', fontSize: 12 }}
+                stroke="#8884d8"
+              />
+              {/* Y-axis right: Avg Piglet Weight */}
+              <YAxis
+                yAxisId="piglet"
+                orientation="right"
+                domain={chartDomains.piglet}
+                tick={{ fontSize: 11 }}
+                label={{ value: 'Peso Leitão (kg)', angle: 90, position: 'insideRight', fontSize: 12 }}
+                stroke="#82ca9d"
+              />
+              {/* Y-axis far right: Avg Slaughter Weight */}
+              <YAxis
+                yAxisId="slaughter"
+                orientation="right"
+                domain={chartDomains.slaughter}
+                tick={{ fontSize: 11 }}
+                label={{ value: 'Peso Abate (kg)', angle: 90, position: 'insideRight', fontSize: 12, dx: 30 }}
+                stroke="#ff7300"
+                axisLine={{ stroke: '#ff7300' }}
+                tickLine={{ stroke: '#ff7300' }}
+              />
+              <Tooltip />
+              <Legend verticalAlign="top" height={36} />
+              <Line
+                yAxisId="cap"
+                type="monotone"
+                dataKey="cap_1"
+                name="CAP₁"
+                stroke="#8884d8"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+              <Line
+                yAxisId="piglet"
+                type="monotone"
+                dataKey="avg_piglet_weight"
+                name="Peso Médio Leitão"
+                stroke="#82ca9d"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+              <Line
+                yAxisId="slaughter"
+                type="monotone"
+                dataKey="avg_slaughter_weight"
+                name="Peso Médio Abate"
+                stroke="#ff7300"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       )}
 
       {showForm && (

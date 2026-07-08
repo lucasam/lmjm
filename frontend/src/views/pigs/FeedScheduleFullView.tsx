@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
 import { getFeedTypeDescription } from '../../constants/feedTypes';
-import { getFeedSchedule } from '../../api/client';
+import { getBatch, getModule, getFeedSchedule } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -30,6 +30,10 @@ export default function FeedScheduleFullView() {
 
   const id = batchId ?? '';
   const fetchSchedule = useCallback(() => getFeedSchedule(id), [id]);
+  const fetchBatch = useCallback(() => getBatch(id), [id]);
+  const { data: batch } = useApi(fetchBatch);
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
   const { data: schedule, loading, error, refetch } = useApi(fetchSchedule);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -60,7 +64,7 @@ export default function FeedScheduleFullView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail'), to: `/pigs/batches/${encodeURIComponent(id)}` },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})`, to: `/pigs/batches/${encodeURIComponent(id)}` },
     { label: t('pigs.feedSchedule') },
   ];
 

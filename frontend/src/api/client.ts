@@ -427,6 +427,13 @@ export function reprocessFiscalDocument(pk: string, fiscalDocumentNumber: string
   return post('/fiscal-documents/reprocess', { pk, fiscal_document_number: fiscalDocumentNumber });
 }
 
+export async function deleteFiscalDocument(pk: string, sk: string): Promise<void> {
+  await fetchWithAuth('/fiscal-documents', {
+    method: 'DELETE',
+    body: JSON.stringify({ pk, sk }),
+  });
+}
+
 // --- Batch Financial Results (Borderô) ---
 
 export function postBatchFinancialResult(batchId: string, data: Record<string, unknown>): Promise<void> {

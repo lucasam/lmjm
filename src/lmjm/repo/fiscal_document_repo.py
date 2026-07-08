@@ -52,5 +52,8 @@ class FiscalDocumentRepo:
     def delete(self, pk: str, fiscal_document_number: str) -> None:
         self.table.delete_item(Key={"pk": pk, "sk": f"FiscalDocument|{fiscal_document_number}"})
 
+    def delete_by_sk(self, pk: str, sk: str) -> None:
+        self.table.delete_item(Key={"pk": pk, "sk": sk})
+
     def put(self, doc: FiscalDocument) -> None:
         self.table.put_item(Item=serialize_to_dict(doc))

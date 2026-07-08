@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { listAllFiscalDocuments, reprocessFiscalDocument } from '../../api/client';
+import { listAllFiscalDocuments, reprocessFiscalDocument, deleteFiscalDocument } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -14,6 +14,7 @@ export default function FiscalDocumentListView() {
   const { user, logout } = useAuth();
   const [reprocessing, setReprocessing] = useState<string | null>(null);
   const [reprocessResult, setReprocessResult] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchDocs = useCallback(() => listAllFiscalDocuments(), []);
   const { data: docs, loading, error, refetch } = useApi(fetchDocs);
@@ -30,6 +31,25 @@ export default function FiscalDocumentListView() {
       setReprocessResult(`✗ ${key}: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setReprocessing(null);
+    }
+  };
+
+  const handleDelete = async (doc: FiscalDocument) => {
+    const key = doc.sk;
+    const label = doc.fiscal_document_number;
+    if (!window.confirm(t('pigs.confirmDeleteFiscalDocument', 'Remover a nota fiscal {{n}}?', { n: label }))) {
+      return;
+    }
+    setDeleting(key);
+    setReprocessResult(null);
+    try {
+      await deleteFiscalDocument(doc.pk, doc.sk);
+      setReprocessResult(`✓ ${label}`);
+      refetch();
+    } catch (err) {
+      setReprocessResult(`✗ ${label}: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -79,15 +99,31 @@ export default function FiscalDocumentListView() {
                     {doc.pk === 'UNMATCHED_FISCAL' ? '⚠️ Sem lote' : doc.pk.substring(0, 8)}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                      onClick={() => handleReprocess(doc)}
-                      disabled={reprocessing === doc.fiscal_document_number}
-                    >
-                      {reprocessing === doc.fiscal_document_number ? '...' : '🔄'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        onClick={() => handleReprocess(doc)}
+                        disabled={reprocessing === doc.fiscal_document_number}
+                      >
+                        {reprocessing === doc.fiscal_document_number ? '...' : '🔄'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        onClick={() => handleDelete(doc)}
+                        disabled={doc.is_converted || deleting === doc.sk}
+                        title={
+                          doc.is_converted
+                            ? t('pigs.fiscalDocumentConvertedTooltip', 'Nota já convertida em recebimento; não pode ser removida')
+                            : t('common.delete', 'Remover')
+                        }
+                      >
+                        {deleting === doc.sk ? '...' : '🗑️'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

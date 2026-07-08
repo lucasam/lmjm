@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
 import {
   getBatch,
+  getModule,
   listFeedBalances,
   listFeedTruckArrivals,
   listMortalities,
@@ -290,6 +291,9 @@ export default function FeedConsumptionDataView() {
   const { data: mortalities, loading: l4, error: e4, refetch: r4 } = useApi(fetchMortalities);
   const { data: plan, loading: l5, error: e5, refetch: r5 } = useApi(fetchPlan);
 
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
+
   const loading = l1 || l2 || l3 || l4 || l5;
   const error = e1 || e2 || e3 || e4 || e5;
   const refetchAll = () => { r1(); r2(); r3(); r4(); r5(); };
@@ -313,7 +317,7 @@ export default function FeedConsumptionDataView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail'), to: `/pigs/batches/${encodeURIComponent(id)}` },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})`, to: `/pigs/batches/${encodeURIComponent(id)}` },
     { label: t('pigs.feedConsumption') },
   ];
 

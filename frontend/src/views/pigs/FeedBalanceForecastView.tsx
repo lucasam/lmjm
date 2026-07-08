@@ -196,7 +196,7 @@ export default function FeedBalanceForecastView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail'), to: `/pigs/batches/${encodeURIComponent(id)}` },
+    { label: `${t('pigs.batchDetail')} (${moduleData?.module_number ?? '—'})`, to: `/pigs/batches/${encodeURIComponent(id)}` },
     { label: t('pigs.feedForecast') },
   ];
 

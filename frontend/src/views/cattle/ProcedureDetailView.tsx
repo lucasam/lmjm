@@ -9,6 +9,9 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import ProcedureActionForm from '../../components/ProcedureActionForm';
 import ProcedureSummary from '../../components/ProcedureSummary';
+import ExportModal from '../../components/ExportModal';
+import type { ExportColumnDef } from '../../utils/exportEngine';
+import { translateActionType, formatDate, formatTags } from '../../utils/exportEngine';
 import type { CattleAnimal, ConfirmProcedureResult } from '../../types/models';
 
 function getReproductiveStatus(r: CattleAnimal): string {
@@ -32,6 +35,7 @@ export default function ProcedureDetailView() {
   const [confirming, setConfirming] = useState(false);
   const [confirmResult, setConfirmResult] = useState<ConfirmProcedureResult | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const fetchProcedure = useCallback(() => getProcedure(procedureId!), [procedureId]);
   const fetchAnimals = useCallback(() => listCattleAnimals(), []);
@@ -80,6 +84,41 @@ export default function ProcedureDetailView() {
     );
   }, [activeAnimals, search]);
 
+  const procedureDate = procedureDetail?.procedure.procedure_date ?? '';
+
+  // Export column definitions for ProcedureDetailView
+  const exportColumns: ExportColumnDef[] = useMemo(() => [
+    { key: 'ear_tag', label: 'Brinco', accessor: (row) => String(row.ear_tag ?? '') },
+    { key: 'action_type', label: 'Tipo de Ação', accessor: (row) => translateActionType(String(row.action_type ?? '')) },
+    { key: 'date', label: 'Data', accessor: (row) => row.date ? formatDate(String(row.date)) : '—' },
+    { key: 'weight_kg', label: 'Peso', accessor: (row) => row.weight_kg ? String(row.weight_kg) : '—' },
+    { key: 'semen', label: 'Sêmen', accessor: (row) => String(row.semen ?? '—') },
+    { key: 'pregnant', label: 'Prenhe', accessor: (row) => row.pregnant === true ? 'Sim' : row.pregnant === false ? 'Não' : '—' },
+    { key: 'note', label: 'Observação', accessor: (row) => String(row.note ?? '—') },
+    { key: 'tags', label: 'Tags', accessor: (row) => { const tags = row.tags as string[] | undefined; return tags && tags.length > 0 ? formatTags(tags, 'excel') : '—'; } },
+  ], []);
+
+  // Flatten procedure actions into export data rows
+  const exportData = useMemo(() => {
+    if (!procedureDetail?.summary?.animals) return [];
+    const rows: Record<string, unknown>[] = [];
+    for (const animal of procedureDetail.summary.animals) {
+      for (const action of animal.actions) {
+        rows.push({
+          ear_tag: animal.ear_tag,
+          action_type: action.action_type,
+          date: action.weighing_date ?? action.insemination_date ?? action.diagnostic_date ?? procedureDate,
+          weight_kg: action.weight_kg,
+          semen: action.semen,
+          pregnant: action.pregnant,
+          note: action.note,
+          tags: action.tags,
+        });
+      }
+    }
+    return rows;
+  }, [procedureDetail, procedureDate]);
+
   const handleActionSuccess = () => {
     setSelectedEarTag(null);
     refetchProcedure();
@@ -114,8 +153,6 @@ export default function ProcedureDetailView() {
       setCancelling(false);
     }
   };
-
-  const procedureDate = procedureDetail?.procedure.procedure_date ?? '';
 
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
@@ -157,14 +194,18 @@ export default function ProcedureDetailView() {
           {/* Left section: Animal list + action form */}
           <div style={{ flex: '1 1 400px', minWidth: 0 }}>
             {/* Search */}
-            <div style={{ marginBottom: 'var(--space-md)' }}>
+            <div style={{ marginBottom: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
               <input
                 type="text"
                 className="form-input"
                 placeholder={t('common.search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                style={{ flex: 1 }}
               />
+              <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
+                Exportar
+              </button>
             </div>
 
             {/* Animal table */}
@@ -340,6 +381,14 @@ export default function ProcedureDetailView() {
           </div>
         </div>
       )}
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        columns={exportColumns}
+        data={exportData}
+        viewContext="procedure-detail"
+        procedureInfo={{ date: procedureDate, status: procedureDetail?.procedure.status ?? '' }}
+      />
     </Layout>
   );
 }

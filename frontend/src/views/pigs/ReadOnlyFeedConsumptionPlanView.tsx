@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { getBatch, getFeedConsumptionPlan, generateFeedPlan } from '../../api/client';
+import { getBatch, getModule, getFeedConsumptionPlan, generateFeedPlan } from '../../api/client';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -21,6 +21,8 @@ export default function ReadOnlyFeedConsumptionPlanView() {
   const fetchBatch = useCallback(() => getBatch(id), [id]);
   const fetchData = useCallback(() => getFeedConsumptionPlan(id), [id]);
   const { data: batch } = useApi(fetchBatch);
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
   const { data, loading, error, refetch } = useApi(fetchData);
 
   const [showModal, setShowModal] = useState(false);
@@ -65,7 +67,7 @@ export default function ReadOnlyFeedConsumptionPlanView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('feedConsumptionPlan.batchDetail', 'Batch Detail'), to: `/pigs/batches/${id}` },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})`, to: `/pigs/batches/${id}` },
     { label: t('feedConsumptionPlan.title', 'Feed Consumption Plan') },
   ];
 

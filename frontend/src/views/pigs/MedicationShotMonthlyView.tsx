@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { listMedicationShots } from '../../api/client';
+import { getBatch, getModule, listMedicationShots } from '../../api/client';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -67,6 +67,11 @@ export default function MedicationShotMonthlyView() {
     [id, month],
   );
 
+  const fetchBatch = useCallback(() => getBatch(id), [id]);
+  const { data: batch } = useApi(fetchBatch);
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
+
   const { data: shots, loading, error, refetch } = useApi(fetchShots);
 
   const daysInMonth = useMemo(() => getDaysInMonth(month), [month]);
@@ -80,7 +85,7 @@ export default function MedicationShotMonthlyView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail'), to: `/pigs/batches/${encodeURIComponent(id)}` },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})`, to: `/pigs/batches/${encodeURIComponent(id)}` },
     { label: t('pigs.medicationShots') },
   ];
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
-import { getBatch, listMortalities } from '../../api/client';
+import { getBatch, getModule, listMortalities } from '../../api/client';
 import { formatDate, formatNumber } from '../../i18n';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -269,6 +269,9 @@ export default function MortalityWeeklyView() {
   const { data: batch, loading: l1, error: e1, refetch: r1 } = useApi(fetchBatch);
   const { data: mortalities, loading: l2, error: e2, refetch: r2 } = useApi(fetchMortalities);
 
+  const fetchModule = useCallback(() => batch ? getModule(batch.module_id) : Promise.resolve(null), [batch]);
+  const { data: module } = useApi(fetchModule);
+
   const loading = l1 || l2;
   const error = e1 || e2;
   const refetchAll = () => { r1(); r2(); };
@@ -283,7 +286,7 @@ export default function MortalityWeeklyView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail'), to: `/pigs/batches/${encodeURIComponent(id)}` },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})`, to: `/pigs/batches/${encodeURIComponent(id)}` },
     { label: t('pigs.mortalityWeekly') },
   ];
 

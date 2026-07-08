@@ -7,6 +7,9 @@ import { listCattleAnimals, listProcedures } from '../../api/client';
 import Layout from '../../components/Layout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
+import ExportModal from '../../components/ExportModal';
+import type { ExportColumnDef } from '../../utils/exportEngine';
+import { formatTags, formatDate } from '../../utils/exportEngine';
 import type { CattleAnimal } from '../../types/models';
 
 function computeAge(birthDate?: string): string {
@@ -38,6 +41,7 @@ export default function AnimalListView() {
   const { user, logout } = useAuth();
   const [search, setSearch] = useState('');
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [exportOpen, setExportOpen] = useState(false);
 
   const fetchAnimals = useCallback(() => listCattleAnimals(), []);
   const fetchProcedures = useCallback(() => listProcedures(), []);
@@ -109,6 +113,21 @@ export default function AnimalListView() {
     { label: t('nav.cattle') },
   ];
 
+  const exportColumns: ExportColumnDef[] = useMemo(() => [
+    { key: 'ear_tag', label: 'Brinco', accessor: (row) => String(row.ear_tag ?? '') },
+    { key: 'breed', label: 'Raça', accessor: (row) => String(row.breed ?? '—') },
+    { key: 'sex', label: 'Sexo', accessor: (row) => String(row.sex ?? '—') },
+    { key: 'age', label: 'Idade', accessor: (row) => computeAge(row.birth_date as string | undefined) },
+    { key: 'status', label: 'Situação', accessor: (row) => getReproductiveStatus(row as unknown as CattleAnimal) },
+    { key: 'tags', label: 'Tags', accessor: (row) => formatTags((row.tags as string[]) ?? [], 'excel') },
+    { key: 'last_tag', label: 'Última Tag', accessor: (row) => { const tags = row.tags as string[] | undefined; return tags && tags.length > 0 ? tags[tags.length - 1] : '—'; } },
+    { key: 'batch', label: 'Lote', accessor: (row) => String(row.batch ?? '—') },
+    { key: 'last_weight', label: 'Último Peso', accessor: (row) => row.last_weight ? String(row.last_weight) : '—' },
+    { key: 'last_weight_date', label: 'Dt Último Peso', accessor: (row) => row.last_weight_date ? formatDate(String(row.last_weight_date)) : '—' },
+    { key: 'mother', label: 'Mãe', accessor: (row) => String(row.mother ?? '—') },
+    { key: 'notes', label: 'Anotações', accessor: (row) => { const notes = row.notes as string[] | undefined; return notes ? notes.join('; ') : ''; } },
+  ], []);
+
   return (
     <Layout
       breadcrumbs={breadcrumbs}
@@ -144,14 +163,18 @@ export default function AnimalListView() {
       </div>
 
       {!loading && !error && (
-        <div style={{ marginBottom: 'var(--space-md)' }}>
+        <div style={{ marginBottom: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
           <input
             type="text"
             className="form-input"
             placeholder={t('common.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1 }}
           />
+          <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
+            Exportar
+          </button>
         </div>
       )}
 
@@ -237,6 +260,13 @@ export default function AnimalListView() {
           </table>
         </div>
       )}
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        columns={exportColumns}
+        data={displayAnimals as unknown as Record<string, unknown>[]}
+        viewContext="animal-list"
+      />
     </Layout>
   );
 }

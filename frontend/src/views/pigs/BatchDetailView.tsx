@@ -267,7 +267,7 @@ export default function BatchDetailView() {
   const breadcrumbs = [
     { label: t('nav.home'), to: '/' },
     { label: t('nav.pigs'), to: '/pigs' },
-    { label: t('pigs.batchDetail') },
+    { label: `${t('pigs.batchDetail')} (${module?.module_number ?? '—'})` },
   ];
 
   const closeAndRefresh = (refetchFn: () => void) => () => {
@@ -307,7 +307,13 @@ export default function BatchDetailView() {
               <h2 className="section-title">{t('pigs.startSummary')}</h2>
               <div className="detail-grid">
                 <DetailRow label={t('pigs.totalAnimalCount')} value={String(batch.total_animal_count)} />
-                <DetailRow label={t('pigs.averageStartDate')} value={batch.average_start_date ? formatDate(batch.average_start_date) : undefined} />
+                <DetailRow label={t('pigs.averageStartDate')} value={
+                  batch.average_start_date
+                    ? batch.status === 'in_progress'
+                      ? `${formatDate(batch.average_start_date)} (${Math.floor((Date.now() - new Date(batch.average_start_date + 'T00:00:00').getTime()) / 86400000)} dias)`
+                      : formatDate(batch.average_start_date)
+                    : undefined
+                } />
                 <DetailRow label={t('pigs.distinctOriginCount')} value={batch.distinct_origin_count != null ? String(batch.distinct_origin_count) : undefined} />
                 <DetailRow label={t('pigs.originTypes')} value={batch.origin_types?.join(', ')} />
                 <DetailRow label={t('pigs.initialAnimalWeight')} value={batch.initial_animal_weight != null ? formatNumber(batch.initial_animal_weight, 2) : undefined} />

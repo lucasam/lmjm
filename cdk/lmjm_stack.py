@@ -1244,9 +1244,22 @@ class LmjmStack(Stack):
         )
         table.grant_read_write_data(reprocess_fiscal_document)
 
+        delete_fiscal_document = _lambda.Function(
+            self,
+            "DeleteFiscalDocumentLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.delete_fiscal_document.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(delete_fiscal_document)
+
         # /fiscal-documents (top-level)
         all_fiscal_documents_resource = api.root.add_resource("fiscal-documents")
         add_cognito_method(all_fiscal_documents_resource, "GET", apigw.LambdaIntegration(get_all_fiscal_documents))
+        add_cognito_method(all_fiscal_documents_resource, "DELETE", apigw.LambdaIntegration(delete_fiscal_document))
 
         # /fiscal-documents/reprocess
         reprocess_resource = all_fiscal_documents_resource.add_resource("reprocess")
