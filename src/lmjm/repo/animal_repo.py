@@ -30,11 +30,14 @@ class AnimalRepo:
         response = self.table.query(
             IndexName="ear_tag-sk-index",
             KeyConditionExpression=Key("ear_tag").eq(ear_tag) & Key("sk").eq("Animal"),
-            Limit=1,
         )
         items = response["Items"]
         if not items:
             return None
+        # Prioritize active animals when multiple share the same ear_tag
+        for item in items:
+            if item.get("status") == "Ativa":
+                return load_data_class_from_dict(item, Animal)
         return load_data_class_from_dict(items[0], Animal)
 
     def list_cattle(self) -> list[Animal]:

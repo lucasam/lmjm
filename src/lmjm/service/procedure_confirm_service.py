@@ -71,7 +71,7 @@ class ProcedureConfirmService:
 
     def _apply_weight(self, action: ProcedureAction, animal: Animal) -> None:
         date_str = action.weighing_date or ""
-        parsed_date = datetime.strptime(date_str, "%Y%m%d")
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
         formatted = parsed_date.strftime("%Y%m%d")
         weight = Weight(
             pk=animal.pk,
@@ -83,7 +83,7 @@ class ProcedureConfirmService:
 
     def _apply_insemination(self, action: ProcedureAction, animal: Animal) -> None:
         date_str = action.insemination_date or ""
-        parsed = datetime.strptime(date_str, "%Y%m%d")
+        parsed = datetime.strptime(date_str, "%Y-%m-%d")
         insemination = Insemination(
             pk=animal.pk,
             sk=f"Insemination|{parsed.strftime('%Y%m%d')}",
@@ -108,15 +108,20 @@ class ProcedureConfirmService:
 
     def _apply_diagnostic(self, action: ProcedureAction, animal: Animal) -> None:
         date_str = action.diagnostic_date or ""
-        diagnostic_date = datetime.strptime(date_str, "%Y%m%d")
+        diagnostic_date = datetime.strptime(date_str, "%Y-%m-%d")
 
         insemination = self.insemination_repo.get_latest(animal.pk)
-        if not insemination:
-            raise ValueError(f"No insemination found for {action.ear_tag}")
 
-        expected_delivery_date = (
-            datetime.strptime(insemination.insemination_date, "%Y-%m-%d") + timedelta(days=292)
-        ).strftime("%Y-%m-%d")
+        expected_delivery_date: str | None = None
+        semen: str = ""
+        breeding_date: str = ""
+
+        if insemination:
+            expected_delivery_date = (
+                datetime.strptime(insemination.insemination_date, "%Y-%m-%d") + timedelta(days=292)
+            ).strftime("%Y-%m-%d")
+            semen = insemination.semen
+            breeding_date = insemination.insemination_date
 
         pregnant = action.pregnant if action.pregnant is not None else False
 
@@ -124,10 +129,10 @@ class ProcedureConfirmService:
             pk=animal.pk,
             sk=f"Diagnostic|{diagnostic_date.strftime('%Y%m%d')}",
             diagnostic_date=diagnostic_date.strftime("%Y-%m-%d"),
-            breeding_date=insemination.insemination_date,
+            breeding_date=breeding_date,
             pregnant=pregnant,
-            expected_delivery_date=expected_delivery_date,
-            semen=insemination.semen,
+            expected_delivery_date=expected_delivery_date or "",
+            semen=semen,
         )
         self.diagnostic_repo.put(diagnostic)
 
@@ -137,12 +142,17 @@ class ProcedureConfirmService:
             animal.inseminated = False
             animal.transferred = False
 
-            edd_formatted = datetime.strptime(expected_delivery_date, "%Y-%m-%d").strftime("%d-%m-%Y")
-            default_note = (
-                f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed. "
-                f"{insemination.semen}. EDD: {edd_formatted}"
-            )
+            if expected_delivery_date:
+                edd_formatted = datetime.strptime(expected_delivery_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+                default_note = (
+                    f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed. " f"{semen}. EDD: {edd_formatted}"
+                )
+            else:
+                default_note = f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed"
         else:
+            animal.pregnant = False
+            animal.inseminated = False
+            animal.implanted = False
             default_note = f"{diagnostic_date.strftime('%d-%m-%Y')}: IATF Failed"
 
         if not animal.notes:

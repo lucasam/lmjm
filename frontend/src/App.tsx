@@ -6,6 +6,7 @@ import LoginView from './views/LoginView';
 import SpeciesSelectionView from './views/SpeciesSelectionView';
 import AnimalListView from './views/cattle/AnimalListView';
 import AnimalDetailView from './views/cattle/AnimalDetailView';
+import AnimalFormView from './views/cattle/AnimalFormView';
 import ProcedureListView from './views/cattle/ProcedureListView';
 import ProcedureCreateView from './views/cattle/ProcedureCreateView';
 import ProcedureDetailView from './views/cattle/ProcedureDetailView';
@@ -86,6 +87,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AnimalListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/new"
+        element={
+          <ProtectedRoute>
+            <AnimalFormView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/:earTag/edit"
+        element={
+          <ProtectedRoute>
+            <AnimalFormView />
           </ProtectedRoute>
         }
       />

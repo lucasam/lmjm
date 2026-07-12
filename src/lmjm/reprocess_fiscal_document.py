@@ -77,7 +77,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     )
 
     if raw_material.category == "feed":
-        _handle_feed_product(parsed, pk)
+        _handle_feed_product([parsed], pk)
         return respond(body={"message": "reprocessed", "classification": "feed"})
     elif raw_material.category == "medicine":
         _handle_medicine_product(parsed, pk, raw_material.description)

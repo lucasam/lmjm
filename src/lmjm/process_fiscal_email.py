@@ -144,8 +144,15 @@ def _process_single_nfe(
     parsed: ParsedNfe,
     batch_pk: str,
     s3_key: str,
-) -> None:
-    """Process a single parsed NF-e item: create FiscalDocument, classify, and link."""
+) -> Optional[str]:
+    """Create the FiscalDocument, classify it, and handle medicine products.
+
+    Returns the classification category ("feed", "medicine", or the raw
+    material category) or None when the item is skipped (duplicate) or its
+    product is not yet classified. Feed items are intentionally NOT written
+    here: the caller aggregates feed items sharing the same product_code into a
+    single FeedScheduleFiscalDocument via ``_handle_feed_product``.
+    """
     # Build unique sk using item_number when present
     if parsed.item_number:
         doc_sk = f"FiscalDocument|{parsed.fiscal_document_number}|{parsed.item_number}"
@@ -156,7 +163,7 @@ def _process_single_nfe(
     existing = fiscal_document_repo.get_by_sk(batch_pk, doc_sk)
     if existing is not None:
         logger.warning("Duplicate fiscal document sk %s, skipping", doc_sk)
-        return
+        return None
 
     # Create FiscalDocument
     fiscal_doc = FiscalDocument(
@@ -187,16 +194,28 @@ def _process_single_nfe(
             category="",
         )
         raw_material_type_repo.put(new_type)
-        return
+        return None
 
-    if raw_material.category == "feed":
-        _handle_feed_product(parsed, batch_pk)
-    elif raw_material.category == "medicine":
+    if raw_material.category == "medicine":
         _handle_medicine_product(parsed, batch_pk, raw_material.description)
 
+    return raw_material.category
 
-def _handle_feed_product(parsed: ParsedNfe, batch_pk: str) -> None:
-    """Create FeedScheduleFiscalDocument, optionally matching a FeedSchedule."""
+
+def _handle_feed_product(items: list[ParsedNfe], batch_pk: str) -> None:
+    """Create a single FeedScheduleFiscalDocument for a group of feed items.
+
+    All items in ``items`` share the same product_code and fiscal document.
+    Their delivered amounts (actual_amount_kg) are summed into one record so
+    that a fiscal document listing the same feed code across multiple line
+    items produces a single feed-schedule entry.
+    """
+    if not items:
+        return
+
+    first = items[0]
+    total_amount_kg = sum(item.actual_amount_kg for item in items)
+
     feed_schedule_id: Optional[str] = None
     planned_date: str = ""
 
@@ -206,30 +225,31 @@ def _handle_feed_product(parsed: ParsedNfe, batch_pk: str) -> None:
         existing_fsfds = feed_schedule_fiscal_document_repo.list(batch_pk)
         already_matched = {f.feed_schedule_id for f in existing_fsfds if f.feed_schedule_id}
         feed_schedule_id, planned_date = _match_feed_schedule(
-            parsed.product_code, schedules, parsed.scheduled_date, already_matched
+            first.product_code, schedules, first.scheduled_date, already_matched
         )
 
-    # Build unique sk using item_number when present
-    if parsed.item_number:
-        fsfd_sk = f"FeedScheduleFiscalDocument|{parsed.fiscal_document_number}|{parsed.item_number}"
-    else:
-        fsfd_sk = f"FeedScheduleFiscalDocument|{parsed.fiscal_document_number}"
+    # A single fiscal document can carry several feed codes, so the sk is keyed
+    # by product_code to keep distinct codes separate while merging duplicates.
+    fsfd_sk = f"FeedScheduleFiscalDocument|{first.fiscal_document_number}|{first.product_code}"
 
     fsfd = FeedScheduleFiscalDocument(
         pk=batch_pk,
         sk=fsfd_sk,
-        fiscal_document_number=parsed.fiscal_document_number,
+        fiscal_document_number=first.fiscal_document_number,
         feed_schedule_id=feed_schedule_id,
         status="pending",
-        product_code=parsed.product_code,
-        actual_amount_kg=parsed.actual_amount_kg,
-        issue_date=parsed.issue_date,
+        product_code=first.product_code,
+        actual_amount_kg=total_amount_kg,
+        issue_date=first.issue_date,
         planned_date=planned_date,
     )
     feed_schedule_fiscal_document_repo.put(fsfd)
     logger.info(
-        "Created FeedScheduleFiscalDocument %s (feed_schedule_id=%s) batch %s",
-        parsed.fiscal_document_number,
+        "Created FeedScheduleFiscalDocument %s code=%s amount=%d from %d item(s) (feed_schedule_id=%s) batch %s",
+        first.fiscal_document_number,
+        first.product_code,
+        total_amount_kg,
+        len(items),
         feed_schedule_id,
         batch_pk,
     )
@@ -302,7 +322,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     first_order,
                 )
 
+        # Create FiscalDocuments and classify each item. Collect feed items,
+        # grouped by product_code, so multiple line items with the same feed
+        # code are aggregated into a single FeedScheduleFiscalDocument.
+        feed_items_by_code: dict[str, list[ParsedNfe]] = {}
         for parsed in parsed_items:
-            _process_single_nfe(parsed, batch_pk, s3_key)
+            category = _process_single_nfe(parsed, batch_pk, s3_key)
+            if category == "feed":
+                feed_items_by_code.setdefault(parsed.product_code, []).append(parsed)
+
+        for items in feed_items_by_code.values():
+            _handle_feed_product(items, batch_pk)
 
     return {"statusCode": 200, "body": "processed"}

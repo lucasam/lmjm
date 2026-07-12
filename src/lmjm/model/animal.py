@@ -9,6 +9,7 @@ from lmjm.util.marshmallow_serializer import serialization_config
 class Animal:
     pk: str
     sk: str = "Animal"
+    species: Optional[str] = None
     ear_tag: Optional[str] = None
     breed: Optional[str] = None
     sex: Optional[str] = None

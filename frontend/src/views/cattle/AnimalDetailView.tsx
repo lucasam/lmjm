@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useApi } from '../../hooks/useApi';
 import { getCattleAnimal, listWeights, listInseminations } from '../../api/client';
@@ -11,14 +11,21 @@ import ErrorMessage from '../../components/ErrorMessage';
 import DataTable, { type Column } from '../../components/DataTable';
 import WeightForm from './WeightForm';
 import DiagnosticForm from './DiagnosticForm';
+import EarTagForm from './EarTagForm';
+import NoteForm from './NoteForm';
+import TagForm from './TagForm';
 import type { Weight } from '../../types/models';
 
 export default function AnimalDetailView() {
   const { t } = useTranslation();
   const { earTag } = useParams<{ earTag: string }>();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showWeightForm, setShowWeightForm] = useState(false);
   const [showDiagnosticForm, setShowDiagnosticForm] = useState(false);
+  const [showEarTagForm, setShowEarTagForm] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [showTagForm, setShowTagForm] = useState(false);
 
   const tag = earTag ?? '';
 
@@ -129,6 +136,18 @@ export default function AnimalDetailView() {
                 {t('cattle.newDiagnostic', 'Diagnóstico')}
               </button>
             )}
+            <button type="button" className="btn btn-primary" onClick={() => setShowNoteForm(true)}>
+              {t('cattle.newNote', 'Nova Anotação')}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => setShowTagForm(true)}>
+              {t('cattle.newTag', 'Nova Tag')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => navigate(`/cattle/${encodeURIComponent(tag)}/edit`)}>
+              {t('cattle.editAnimal', 'Editar Animal')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowEarTagForm(true)}>
+              {t('cattle.changeEarTag', 'Alterar Número do Brinco')}
+            </button>
           </div>
 
           {/* Weight chart — last 2 years */}
@@ -163,6 +182,34 @@ export default function AnimalDetailView() {
           insemination={latestInsemination}
           onClose={() => setShowDiagnosticForm(false)}
           onSuccess={() => { setShowDiagnosticForm(false); refetchAnimal(); }}
+        />
+      )}
+
+      {showEarTagForm && (
+        <EarTagForm
+          earTag={tag}
+          onClose={() => setShowEarTagForm(false)}
+          onSuccess={(newEarTag) => {
+            setShowEarTagForm(false);
+            navigate(`/cattle/${encodeURIComponent(newEarTag)}`, { replace: true });
+          }}
+        />
+      )}
+
+      {showNoteForm && (
+        <NoteForm
+          earTag={tag}
+          onClose={() => setShowNoteForm(false)}
+          onSuccess={() => { setShowNoteForm(false); refetchAnimal(); }}
+        />
+      )}
+
+      {showTagForm && (
+        <TagForm
+          earTag={tag}
+          existingTags={animal?.tags ?? []}
+          onClose={() => setShowTagForm(false)}
+          onSuccess={() => { setShowTagForm(false); refetchAnimal(); }}
         />
       )}
     </Layout>

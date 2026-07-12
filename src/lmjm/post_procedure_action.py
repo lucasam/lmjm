@@ -8,7 +8,7 @@ from typing import Any, Optional
 import boto3
 
 from lmjm.model import ProcedureAction, ProcedureActionType, ProcedureStatus
-from lmjm.repo import AnimalRepo, InseminationRepo, ProcedureActionRepo, ProcedureRepo
+from lmjm.repo import AnimalRepo, ProcedureActionRepo, ProcedureRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
 
@@ -19,7 +19,6 @@ table = dynamodb.Table(TABLE_NAME)
 procedure_repo = ProcedureRepo(table)
 procedure_action_repo = ProcedureActionRepo(table)
 animal_repo = AnimalRepo(table)
-insemination_repo = InseminationRepo(table)
 
 
 @dataclasses.dataclass
@@ -94,9 +93,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             return respond(status_code=400, error="diagnostic_date must be in YYYYMMDD format")
         if request.pregnant is None or not isinstance(request.pregnant, bool):
             return respond(status_code=400, error="pregnant must be a boolean")
-        insemination = insemination_repo.get_latest(animal.pk)
-        if not insemination:
-            return respond(status_code=404, error="No insemination found")
         action_fields["diagnostic_date"] = parsed.strftime("%Y-%m-%d")
         action_fields["pregnant"] = request.pregnant
         if request.note:

@@ -426,15 +426,89 @@ class LmjmStack(Stack):
         )
         table.grant_read_write_data(post_weight)
 
+        put_ear_tag = _lambda.Function(
+            self,
+            "PutEarTagLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.put_ear_tag.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_ear_tag)
+
+        post_cattle_animal = _lambda.Function(
+            self,
+            "PostCattleAnimalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_cattle_animal.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_cattle_animal)
+
+        put_cattle_animal = _lambda.Function(
+            self,
+            "PutCattleAnimalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.put_cattle_animal.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(put_cattle_animal)
+
+        post_animal_note = _lambda.Function(
+            self,
+            "PostAnimalNoteLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_animal_note.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_animal_note)
+
+        post_animal_tag = _lambda.Function(
+            self,
+            "PostAnimalTagLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_animal_tag.lambda_handler",
+            code=lambda_code,
+            environment={"TABLE_NAME": table.table_name},
+        )
+        table.grant_read_write_data(post_animal_tag)
+
         # --- Cattle API Gateway Routes ---
 
         # /cattle/animals
         cattle_animals_resource = cattle_resource.add_resource("animals")
         add_cognito_method(cattle_animals_resource, "GET", apigw.LambdaIntegration(get_cattle_animals))
+        add_cognito_method(cattle_animals_resource, "POST", apigw.LambdaIntegration(post_cattle_animal))
 
         # /cattle/animals/{animal_id}
         cattle_animal_resource = cattle_animals_resource.add_resource("{animal_id}")
         add_cognito_method(cattle_animal_resource, "GET", apigw.LambdaIntegration(get_cattle_animal))
+        add_cognito_method(cattle_animal_resource, "PUT", apigw.LambdaIntegration(put_cattle_animal))
+
+        # /cattle/animals/{animal_id}/ear-tag
+        cattle_ear_tag_resource = cattle_animal_resource.add_resource("ear-tag")
+        add_cognito_method(cattle_ear_tag_resource, "PUT", apigw.LambdaIntegration(put_ear_tag))
+
+        # /cattle/animals/{animal_id}/notes
+        cattle_notes_resource = cattle_animal_resource.add_resource("notes")
+        add_cognito_method(cattle_notes_resource, "POST", apigw.LambdaIntegration(post_animal_note))
+
+        # /cattle/animals/{animal_id}/tags
+        cattle_tags_resource = cattle_animal_resource.add_resource("tags")
+        add_cognito_method(cattle_tags_resource, "POST", apigw.LambdaIntegration(post_animal_tag))
 
         # /cattle/animals/{animal_id}/inseminations
         cattle_inseminations_resource = cattle_animal_resource.add_resource("inseminations")

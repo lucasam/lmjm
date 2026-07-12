@@ -28,11 +28,12 @@ function computeAge(birthDate?: string): string {
 function getReproductiveStatus(r: CattleAnimal): string {
   const statuses: string[] = [];
   if (r.pregnant) statuses.push('Prenhe');
+  else statuses.push('Vazia');
   if (r.implanted) statuses.push('Implantada');
   if (r.inseminated) statuses.push('Inseminada');
   if (r.lactating) statuses.push('Lactante');
   if (r.transferred) statuses.push('Transferida');
-  return statuses.length > 0 ? statuses.join(', ') : 'Vazia';
+  return statuses.join(', ');
 }
 
 export default function AnimalListView() {
@@ -40,6 +41,7 @@ export default function AnimalListView() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<string[]>([]);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -66,17 +68,70 @@ export default function AnimalListView() {
     });
   }, [animals]);
 
-  const displayAnimals = useMemo(() => {
-    if (!search.trim()) return activeAnimals;
-    const q = search.toLowerCase();
-    return activeAnimals.filter((a) =>
-      (a.ear_tag ?? '').toLowerCase().includes(q) ||
-      (a.breed ?? '').toLowerCase().includes(q) ||
-      (a.sex ?? '').toLowerCase().includes(q) ||
-      (a.tags ?? []).some((tag) => tag.toLowerCase().includes(q)) ||
-      getReproductiveStatus(a).toLowerCase().includes(q)
+  const SEX_ALIASES: Record<string, string> = {
+    macho: 'M',
+    femea: 'F',
+    fêmea: 'F',
+  };
+
+  const matchesFilter = useCallback((animal: CattleAnimal, filter: string): boolean => {
+    const q = filter.toLowerCase();
+
+    // Check sex aliases
+    const sexValue = SEX_ALIASES[q];
+    if (sexValue) {
+      return (animal.sex ?? '').toUpperCase() === sexValue;
+    }
+
+    // General search across fields
+    return (
+      (animal.ear_tag ?? '').toLowerCase().includes(q) ||
+      (animal.breed ?? '').toLowerCase().includes(q) ||
+      (animal.tags ?? []).some((tag) => tag.toLowerCase().includes(q)) ||
+      getReproductiveStatus(animal).toLowerCase().includes(q)
     );
-  }, [activeAnimals, search]);
+  }, []);
+
+  const displayAnimals = useMemo(() => {
+    let result = activeAnimals;
+
+    // Apply committed filters (AND logic)
+    for (const filter of filters) {
+      result = result.filter((a) => matchesFilter(a, filter));
+    }
+
+    // Apply live search (not yet committed)
+    if (search.trim()) {
+      const q = search.trim();
+      result = result.filter((a) => matchesFilter(a, q));
+    }
+
+    return result;
+  }, [activeAnimals, filters, search, matchesFilter]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && search.trim()) {
+      e.preventDefault();
+      const newFilter = search.trim();
+      if (!filters.includes(newFilter.toLowerCase())) {
+        setFilters((prev) => [...prev, newFilter]);
+      }
+      setSearch('');
+    }
+  };
+
+  const removeFilter = (index: number) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getFilterLabel = (filter: string): string => {
+    const q = filter.toLowerCase();
+    const sexValue = SEX_ALIASES[q];
+    if (sexValue) {
+      return `Sexo: ${sexValue === 'M' ? 'Macho' : 'Fêmea'}`;
+    }
+    return filter;
+  };
 
   const toggleNotes = (earTag: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,18 +218,62 @@ export default function AnimalListView() {
       </div>
 
       {!loading && !error && (
-        <div style={{ marginBottom: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
-          <input
-            type="text"
-            className="form-input"
-            placeholder={t('common.search')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
-            Exportar
-          </button>
+        <div style={{ marginBottom: 'var(--space-md)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder={t('common.search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              style={{ flex: 1 }}
+            />
+            <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/new')}>
+              {t('cattle.newAnimal', 'Novo Animal')}
+            </button>
+            <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
+              Exportar
+            </button>
+          </div>
+          {filters.length > 0 && (
+            <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap', marginTop: 'var(--space-xs)' }}>
+              {filters.map((filter, index) => (
+                <span
+                  key={index}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {getFilterLabel(filter)}
+                  <button
+                    type="button"
+                    onClick={() => removeFilter(index)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'white',
+                      cursor: 'pointer',
+                      padding: '0 2px',
+                      fontSize: '1rem',
+                      lineHeight: 1,
+                    }}
+                    aria-label={`Remove filter ${filter}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

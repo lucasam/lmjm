@@ -226,6 +226,62 @@ export function getCattleAnimal(earTag: string): Promise<CattleAnimal> {
   return get<CattleAnimal>(`/cattle/animals/${encodeURIComponent(earTag)}`);
 }
 
+export async function replaceEarTag(earTag: string, newEarTag: string): Promise<CattleAnimal> {
+  const response = await fetchWithAuth(`/cattle/animals/${encodeURIComponent(earTag)}/ear-tag`, {
+    method: 'PUT',
+    body: JSON.stringify({ new_ear_tag: newEarTag }),
+  });
+  return response.json() as Promise<CattleAnimal>;
+}
+
+export interface AnimalPayload {
+  ear_tag?: string;
+  breed?: string | null;
+  sex?: string | null;
+  birth_date?: string | null;
+  mother?: string | null;
+  batch?: string | null;
+  status?: string | null;
+  pregnant?: boolean;
+  implanted?: boolean;
+  inseminated?: boolean;
+  lactating?: boolean;
+  transferred?: boolean;
+  tags?: string[] | null;
+}
+
+export async function createCattleAnimal(data: AnimalPayload): Promise<CattleAnimal> {
+  const response = await fetchWithAuth('/cattle/animals', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json() as Promise<CattleAnimal>;
+}
+
+export async function updateCattleAnimal(earTag: string, data: AnimalPayload): Promise<CattleAnimal> {
+  const response = await fetchWithAuth(`/cattle/animals/${encodeURIComponent(earTag)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return response.json() as Promise<CattleAnimal>;
+}
+
+export async function addAnimalNote(earTag: string, note: string): Promise<CattleAnimal> {
+  const response = await fetchWithAuth(`/cattle/animals/${encodeURIComponent(earTag)}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  });
+  return response.json() as Promise<CattleAnimal>;
+}
+
+export async function addAnimalTag(earTag: string, tag: string): Promise<CattleAnimal> {
+  const response = await fetchWithAuth(`/cattle/animals/${encodeURIComponent(earTag)}/tags`, {
+    method: 'POST',
+    body: JSON.stringify({ tag }),
+  });
+  return response.json() as Promise<CattleAnimal>;
+}
+
 export function listInseminations(earTag: string): Promise<Insemination[]> {
   return get<Insemination[]>(`/cattle/animals/${encodeURIComponent(earTag)}/inseminations`);
 }

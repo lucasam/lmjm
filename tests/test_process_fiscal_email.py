@@ -46,7 +46,6 @@ def _set_env(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(f"{repo_mod}.serialize_to_dict", _decimal_safe_serialize)
 
 
-
 def _build_nfe_xml(
     nNF: str = "833871",
     dhEmi: str = "2026-03-26T12:10:26-03:00",
@@ -157,15 +156,39 @@ def _seed_batch(table: Any) -> None:
 
 
 def _seed_feed_raw_material(table: Any, code: str = "130906", description: str = "ST06") -> None:
-    _put(table, RawMaterialType(pk="RAW_MATERIAL_TYPE", sk=f"RawMaterialType|{code}", code=code, description=description, category="feed"))
+    _put(
+        table,
+        RawMaterialType(
+            pk="RAW_MATERIAL_TYPE", sk=f"RawMaterialType|{code}", code=code, description=description, category="feed"
+        ),
+    )
 
 
 def _seed_medicine_raw_material(table: Any, code: str = "200001", description: str = "Amoxicillin") -> None:
-    _put(table, RawMaterialType(pk="RAW_MATERIAL_TYPE", sk=f"RawMaterialType|{code}", code=code, description=description, category="medicine"))
+    _put(
+        table,
+        RawMaterialType(
+            pk="RAW_MATERIAL_TYPE",
+            sk=f"RawMaterialType|{code}",
+            code=code,
+            description=description,
+            category="medicine",
+        ),
+    )
 
 
 def _seed_feed_schedule(table: Any, feed_type: str = "130906", planned_date: str = "2026-03-28") -> None:
-    _put(table, FeedSchedule(pk=BATCH_PK, sk="FeedSchedule|sched-1", feed_type=feed_type, planned_date=planned_date, expected_amount_kg=16000, status="scheduled"))
+    _put(
+        table,
+        FeedSchedule(
+            pk=BATCH_PK,
+            sk="FeedSchedule|sched-1",
+            feed_type=feed_type,
+            planned_date=planned_date,
+            expected_amount_kg=16000,
+            status="scheduled",
+        ),
+    )
 
 
 def _upload_email(s3: Any, raw_email: bytes, key: str = MESSAGE_ID) -> None:
@@ -394,3 +417,119 @@ def test_no_xml_attachments_returns_success_no_fiscal_doc() -> None:
     resp = table.scan()
     fiscal_items = [i for i in resp["Items"] if str(i.get("sk", "")).startswith("FiscalDocument|")]
     assert len(fiscal_items) == 0
+
+
+# ── Aggregation: multiple items with the same feed code ─────────────────────────
+
+
+def _build_multi_item_nfe_xml(
+    nNF: str = "900001",
+    dhEmi: str = "2026-03-26T12:10:26-03:00",
+    xNome: str = "BRF S.A.",
+    xPed: str = str(SUPPLY_ID),
+    items: list[tuple[str, str, str]] | None = None,
+) -> bytes:
+    """Build an NF-e XML with multiple <det> items.
+
+    Each item is a (cProd, xProd, qCom) tuple. xPed is placed on the first item.
+    """
+    if items is None:
+        items = [
+            ("130906", "ST06 RAC SUI TERM", "10000.0000"),
+            ("130906", "ST06 RAC SUI TERM", "6000.0000"),
+        ]
+
+    det_blocks = []
+    for idx, (cProd, xProd, qCom) in enumerate(items, start=1):
+        xped_xml = f"<xPed>{xPed}</xPed>" if (idx == 1 and xPed) else ""
+        det_blocks.append(f"""
+            <det nItem="{idx}">
+                <prod>
+                    <cProd>{cProd}</cProd>
+                    <xProd>{xProd}</xProd>
+                    <qCom>{qCom}</qCom>
+                    {xped_xml}
+                </prod>
+            </det>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="{NFE_NS}">
+    <NFe>
+        <infNFe>
+            <ide>
+                <nNF>{nNF}</nNF>
+                <dhEmi>{dhEmi}</dhEmi>
+            </ide>
+            <emit>
+                <xNome>{xNome}</xNome>
+            </emit>{"".join(det_blocks)}
+        </infNFe>
+    </NFe>
+</nfeProc>"""
+    return xml.encode("utf-8")
+
+
+@mock_aws
+def test_same_code_items_aggregated_into_single_fsfd() -> None:
+    """Multiple line items with the same feed code sum into one FeedScheduleFiscalDocument."""
+    table = _create_table()
+    s3 = _create_bucket()
+    _seed_batch(table)
+    _seed_feed_raw_material(table)
+
+    xml = _build_multi_item_nfe_xml(
+        items=[
+            ("130906", "ST06 RAC SUI TERM", "10000.0000"),
+            ("130906", "ST06 RAC SUI TERM", "6000.0000"),
+        ]
+    )
+    _upload_email(s3, _build_email_with_xml(xml))
+
+    import lmjm.process_fiscal_email as mod
+
+    importlib.reload(mod)
+
+    result = mod.lambda_handler(_ses_event(), None)
+    assert result["statusCode"] == 200
+
+    # Both line items are preserved as individual FiscalDocument records
+    fiscal_docs = _query_items(table, BATCH_PK, "FiscalDocument|")
+    assert len(fiscal_docs) == 2
+
+    # ...but a single aggregated FeedScheduleFiscalDocument is created
+    fsfds = _query_items(table, BATCH_PK, "FeedScheduleFiscalDocument|")
+    assert len(fsfds) == 1
+    assert fsfds[0]["product_code"] == "130906"
+    assert fsfds[0]["actual_amount_kg"] == 16000  # 10000 + 6000
+    assert fsfds[0]["status"] == "pending"
+
+
+@mock_aws
+def test_different_codes_produce_separate_fsfds() -> None:
+    """Line items with different feed codes remain as separate FeedScheduleFiscalDocuments."""
+    table = _create_table()
+    s3 = _create_bucket()
+    _seed_batch(table)
+    _seed_feed_raw_material(table, code="130906", description="ST06")
+    _seed_feed_raw_material(table, code="130907", description="ST07")
+
+    xml = _build_multi_item_nfe_xml(
+        items=[
+            ("130906", "ST06 RAC SUI TERM", "10000.0000"),
+            ("130906", "ST06 RAC SUI TERM", "6000.0000"),
+            ("130907", "ST07 RAC SUI CRESC", "5000.0000"),
+        ]
+    )
+    _upload_email(s3, _build_email_with_xml(xml))
+
+    import lmjm.process_fiscal_email as mod
+
+    importlib.reload(mod)
+
+    mod.lambda_handler(_ses_event(), None)
+
+    fsfds = _query_items(table, BATCH_PK, "FeedScheduleFiscalDocument|")
+    assert len(fsfds) == 2
+    by_code = {f["product_code"]: f for f in fsfds}
+    assert by_code["130906"]["actual_amount_kg"] == 16000
+    assert by_code["130907"]["actual_amount_kg"] == 5000

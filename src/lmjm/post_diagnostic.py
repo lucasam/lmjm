@@ -45,21 +45,25 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     insemination = insemination_repo.get_latest(animal.pk)
 
-    if not insemination:
-        return respond(status_code=404, error="No insemination found")
+    expected_delivery_date: str = ""
+    semen: str = ""
+    breeding_date: str = ""
 
-    expected_delivery_date = (
-        datetime.strptime(insemination.insemination_date, "%Y-%m-%d") + timedelta(days=292)
-    ).strftime("%Y-%m-%d")
+    if insemination:
+        expected_delivery_date = (
+            datetime.strptime(insemination.insemination_date, "%Y-%m-%d") + timedelta(days=292)
+        ).strftime("%Y-%m-%d")
+        semen = insemination.semen
+        breeding_date = insemination.insemination_date
 
     diagnostic = Diagnostic(
         pk=animal.pk,
         sk=f"Diagnostic|{diagnostic_date.strftime('%Y%m%d')}",
         diagnostic_date=diagnostic_date.strftime("%Y-%m-%d"),
-        breeding_date=insemination.insemination_date,
+        breeding_date=breeding_date,
         pregnant=request.pregnant,
         expected_delivery_date=expected_delivery_date,
-        semen=insemination.semen,
+        semen=semen,
     )
     diagnostic_repo.put(diagnostic)
 
@@ -69,11 +73,15 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         animal.inseminated = False
         animal.transferred = False
 
-        edd_formatted = datetime.strptime(expected_delivery_date, "%Y-%m-%d").strftime("%d-%m-%Y")
-        default_note = (
-            f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed. {insemination.semen}. EDD: {edd_formatted}"
-        )
+        if expected_delivery_date:
+            edd_formatted = datetime.strptime(expected_delivery_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+            default_note = f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed. {semen}. EDD: {edd_formatted}"
+        else:
+            default_note = f"{diagnostic_date.strftime('%d-%m-%Y')}: Pregnancy Confirmed"
     else:
+        animal.pregnant = False
+        animal.inseminated = False
+        animal.implanted = False
         default_note = f"{diagnostic_date.strftime('%d-%m-%Y')}: IATF Failed"
 
     if not animal.notes:

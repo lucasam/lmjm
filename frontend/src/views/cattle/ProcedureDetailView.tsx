@@ -17,11 +17,12 @@ import type { CattleAnimal, ConfirmProcedureResult } from '../../types/models';
 function getReproductiveStatus(r: CattleAnimal): string {
   const statuses: string[] = [];
   if (r.pregnant) statuses.push('Prenhe');
+  else statuses.push('Vazia');
   if (r.implanted) statuses.push('Implantada');
   if (r.inseminated) statuses.push('Inseminada');
   if (r.lactating) statuses.push('Lactante');
   if (r.transferred) statuses.push('Transferida');
-  return statuses.length > 0 ? statuses.join(', ') : 'Vazia';
+  return statuses.join(', ');
 }
 
 export default function ProcedureDetailView() {

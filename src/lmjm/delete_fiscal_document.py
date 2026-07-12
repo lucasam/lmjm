@@ -50,9 +50,13 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             error="Fiscal document is linked to a feed truck arrival and cannot be deleted",
         )
 
-    # Remove the linked FeedScheduleFiscalDocument (idempotent). Its sk mirrors the fiscal doc sk.
-    fsfd_sk = "FeedScheduleFiscalDocument|" + sk.split("|", 1)[1]
-    feed_schedule_fiscal_document_repo.delete(pk, fsfd_sk)
+    # Remove the linked FeedScheduleFiscalDocument (idempotent). Delete both the
+    # legacy item_number-keyed sk (mirrors the fiscal doc sk) and the current
+    # product_code-keyed sk used for aggregated feed entries.
+    feed_schedule_fiscal_document_repo.delete(pk, "FeedScheduleFiscalDocument|" + sk.split("|", 1)[1])
+    feed_schedule_fiscal_document_repo.delete(
+        pk, f"FeedScheduleFiscalDocument|{doc.fiscal_document_number}|{doc.product_code}"
+    )
 
     fiscal_document_repo.delete_by_sk(pk, sk)
     logger.info("Deleted FiscalDocument pk=%s sk=%s", pk, sk)
