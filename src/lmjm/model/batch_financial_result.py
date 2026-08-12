@@ -47,7 +47,7 @@ class BatchFinancialResult:
 
     # Mortality
     real_mortality_pct: Decimal = Decimal(0)
-    adjusted_mortality_pct: Decimal = Decimal(0)
+    adjusted_mortality: Decimal = Decimal(0)
 
     # Integrator percentage
     mortality_adjustment_pct: Decimal = Decimal(0)

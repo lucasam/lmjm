@@ -136,6 +136,26 @@ export interface FiscalDocument {
   is_converted?: boolean;
 }
 
+export interface Sell {
+  pk: string;
+  sk: string;
+  sell_date: string;
+  number_of_animals: number;
+  animal_age?: number;
+  sex?: 'M' | 'F';
+  batch?: string;
+  description?: string;
+  buyer?: string;
+  average_weight: number;
+  unit_value: number;
+  total_value: number;
+  total_commission: number;
+  total_transportation: number;
+  net_value: number;
+  price_per_arroba: number;
+  associated_ear_tags?: string[];
+}
+
 export interface FeedScheduleFiscalDocument {
   pk: string;
   sk: string;
@@ -218,7 +238,7 @@ export interface BatchFinancialResult {
 
   // Mortality
   real_mortality_pct: number;
-  adjusted_mortality_pct: number;
+  adjusted_mortality: number;
 
   // Integrator percentage
   mortality_adjustment_pct: number;

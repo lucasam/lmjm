@@ -50,8 +50,8 @@ export default function AnimalListView() {
   const { data: animals, loading, error, refetch } = useApi(fetchAnimals);
   const { data: procedures } = useApi(fetchProcedures);
 
-  const recentProcedures = useMemo(() => {
-    return (procedures ?? []).slice(0, 3);
+  const openProcedures = useMemo(() => {
+    return (procedures ?? []).filter((p) => p.status === 'open');
   }, [procedures]);
 
   const activeAnimals = useMemo(() => {
@@ -192,30 +192,54 @@ export default function AnimalListView() {
     >
       <h1 className="page-title">{t('cattle.animalList')}</h1>
 
-      {/* Procedure section */}
-      <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-md)' }}>
-        <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/procedures/new')}>
-          {t('cattle.newProcedure', 'Novo Manejo')}
-        </button>
-        {recentProcedures.length > 0 && recentProcedures.map((proc) => {
-          const procId = proc.pk.replace('Procedure|', '');
-          const dateFormatted = proc.procedure_date ? `${proc.procedure_date.substring(8, 10)}/${proc.procedure_date.substring(5, 7)}` : '—';
-          return (
-            <button
-              key={proc.pk}
-              type="button"
-              className="btn btn-outline"
-              style={{ fontSize: '0.85rem' }}
-              onClick={() => navigate(`/cattle/procedures/${encodeURIComponent(procId)}`)}
-            >
-              {dateFormatted} — {proc.status === 'confirmed' ? '✓' : '○'} ({proc.action_count ?? 0})
-            </button>
-          );
-        })}
-        <button type="button" className="btn btn-outline" style={{ fontSize: '0.85rem' }} onClick={() => navigate('/cattle/procedures')}>
-          {t('cattle.viewAllProcedures', 'Ver Todos →')}
-        </button>
+      {/* Grouped action toolbar */}
+      <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/new')}>
+            {t('cattle.newAnimal', 'Novo Animal')}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/procedures/new')}>
+            {t('cattle.newProcedure', 'Novo Manejo')}
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/cattle/procedures')}>
+            {t('cattle.procedures', 'Manejos')}
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/cattle/sells')}>
+            {t('cattle.sells', 'Vendas')}
+          </button>
+          <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
+            Exportar
+          </button>
+        </div>
       </div>
+
+      {/* Open procedures (quick access) */}
+      {openProcedures.length > 0 && (
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-md)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            {t('cattle.openProcedures', 'Manejos em aberto')}:
+          </span>
+          {openProcedures.map((proc) => {
+            const procId = proc.pk.replace('Procedure|', '');
+            const dateFormatted = proc.procedure_date
+              ? `${proc.procedure_date.substring(8, 10)}/${proc.procedure_date.substring(5, 7)}`
+              : '—';
+            return (
+              <button
+                key={proc.pk}
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.85rem' }}
+                onClick={() => navigate(`/cattle/procedures/${encodeURIComponent(procId)}`)}
+              >
+                {dateFormatted} — ○ ({proc.action_count ?? 0})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {!loading && !error && (
         <div style={{ marginBottom: 'var(--space-md)' }}>
@@ -229,12 +253,6 @@ export default function AnimalListView() {
               onKeyDown={handleSearchKeyDown}
               style={{ flex: 1 }}
             />
-            <button type="button" className="btn btn-primary" onClick={() => navigate('/cattle/new')}>
-              {t('cattle.newAnimal', 'Novo Animal')}
-            </button>
-            <button type="button" className="btn btn-outline" onClick={() => setExportOpen(true)}>
-              Exportar
-            </button>
           </div>
           {filters.length > 0 && (
             <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap', marginTop: 'var(--space-xs)' }}>

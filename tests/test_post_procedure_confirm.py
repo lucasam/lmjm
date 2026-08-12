@@ -144,10 +144,10 @@ def test_confirm_open_procedure_applies_all_actions_and_returns_counts() -> None
     # Create prior insemination for BR003 (needed for diagnostic)
     _put_insemination(table, animal_pk_3)
 
-    # Stage actions
-    _put_action(table, pk, "weight", "BR001", weighing_date="20250115", weight_kg=350)
-    _put_action(table, pk, "insemination", "BR002", insemination_date="20250115", semen="Bull A")
-    _put_action(table, pk, "diagnostic", "BR003", diagnostic_date="20250115", pregnant=True)
+    # Stage actions (dates stored in YYYY-MM-DD, matching the real action handler)
+    _put_action(table, pk, "weight", "BR001", weighing_date="2025-01-15", weight_kg=350)
+    _put_action(table, pk, "insemination", "BR002", insemination_date="2025-01-15", semen="Bull A")
+    _put_action(table, pk, "diagnostic", "BR003", diagnostic_date="2025-01-15", pregnant=True)
     _put_action(table, pk, "inspected", "BR001")
 
     import lmjm.post_procedure_confirm as mod
@@ -225,8 +225,8 @@ def test_confirmation_with_missing_animal_records_failure_and_continues() -> Non
     animal_pk_1 = _put_animal(table, "BR001")
 
     # Stage actions: one for existing animal, one for missing animal
-    _put_action(table, pk, "weight", "BR001", weighing_date="20250115", weight_kg=400)
-    _put_action(table, pk, "weight", "BR999", weighing_date="20250115", weight_kg=300)
+    _put_action(table, pk, "weight", "BR001", weighing_date="2025-01-15", weight_kg=400)
+    _put_action(table, pk, "weight", "BR999", weighing_date="2025-01-15", weight_kg=300)
 
     import lmjm.post_procedure_confirm as mod
 

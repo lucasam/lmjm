@@ -59,8 +59,8 @@ def _seed_cattle(table: Any) -> None:
             "sk": "Animal",
             "ear_tag": "BR001",
             "breed": "Nelore",
-            "sex": "Female",
-            "status": "active",
+            "sex": "F",
+            "status": "Ativa",
             "species": "cattle",
         }
     )
@@ -70,8 +70,8 @@ def _seed_cattle(table: Any) -> None:
             "sk": "Animal",
             "ear_tag": "BR002",
             "breed": "Angus",
-            "sex": "Male",
-            "status": "active",
+            "sex": "M",
+            "status": "Ativa",
             "species": "cattle",
         }
     )

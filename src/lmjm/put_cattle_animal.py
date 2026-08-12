@@ -6,6 +6,7 @@ from urllib.parse import unquote
 
 import boto3
 
+from lmjm.model import AnimalStatus, Sex
 from lmjm.repo import AnimalRepo
 from lmjm.util.marshmallow_serializer import serialize_to_dict
 from lmjm.util.response import respond
@@ -52,8 +53,22 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return respond(status_code=404, error="Animal not found")
 
     for field in UPDATABLE_FIELDS:
-        if field in body:
-            setattr(animal, field, body[field])
+        if field not in body:
+            continue
+        value = body[field]
+        if field == "status" and value is not None:
+            try:
+                value = AnimalStatus(value)
+            except ValueError:
+                valid = ", ".join(s.value for s in AnimalStatus)
+                return respond(status_code=400, error=f"Invalid status '{value}'. Valid values: {valid}")
+        if field == "sex" and value is not None:
+            try:
+                value = Sex(value)
+            except ValueError:
+                valid = ", ".join(s.value for s in Sex)
+                return respond(status_code=400, error=f"Invalid sex '{value}'. Valid values: {valid}")
+        setattr(animal, field, value)
 
     animal_repo.update(animal)
     logger.info("Updated Animal ear_tag=%s pk=%s", ear_tag, animal.pk)

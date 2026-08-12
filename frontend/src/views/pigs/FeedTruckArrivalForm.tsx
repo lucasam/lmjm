@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { postFeedTruckArrival } from '../../api/client';
-import type { FeedSchedule, FeedScheduleFiscalDocument, RawMaterialType } from '../../types/models';
+import { postFeedTruckArrival, updateFeedTruckArrival } from '../../api/client';
+import type { FeedSchedule, FeedScheduleFiscalDocument, FeedTruckArrival, RawMaterialType } from '../../types/models';
 import { datetimeLocalToApi, currentDatetimeLocal } from '../../utils/datetimeConvert';
 
 interface FeedTruckArrivalFormProps {
@@ -9,6 +9,7 @@ interface FeedTruckArrivalFormProps {
   feedSchedule: FeedSchedule[];
   pendingFiscalDocs?: FeedScheduleFiscalDocument[];
   rawMaterialTypes?: RawMaterialType[];
+  initial?: FeedTruckArrival;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -18,16 +19,19 @@ export default function FeedTruckArrivalForm({
   feedSchedule,
   pendingFiscalDocs,
   rawMaterialTypes,
+  initial,
   onClose,
   onSuccess,
 }: FeedTruckArrivalFormProps) {
   const { t } = useTranslation();
-  const [receiveDate, setReceiveDate] = useState(currentDatetimeLocal());
-  const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState('');
-  const [actualAmountKg, setActualAmountKg] = useState('');
-  const [feedType, setFeedType] = useState('');
-  const [feedDescription, setFeedDescription] = useState('');
-  const [feedScheduleId, setFeedScheduleId] = useState('');
+  const isEdit = !!initial;
+  // receive_date is stored as "YYYY-MM-DDTHH:MM", already datetime-local compatible.
+  const [receiveDate, setReceiveDate] = useState(initial ? initial.receive_date.substring(0, 16) : currentDatetimeLocal());
+  const [fiscalDocumentNumber, setFiscalDocumentNumber] = useState(initial?.fiscal_document_number ?? '');
+  const [actualAmountKg, setActualAmountKg] = useState(initial ? String(initial.actual_amount_kg) : '');
+  const [feedType, setFeedType] = useState(initial?.feed_type ?? '');
+  const [feedDescription, setFeedDescription] = useState(initial?.feed_description ?? '');
+  const [feedScheduleId, setFeedScheduleId] = useState(initial?.feed_schedule_id ?? '');
   const [fiscalDocSk, setFiscalDocSk] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,15 +70,26 @@ export default function FeedTruckArrivalForm({
     setSubmitting(true);
     setError(null);
     try {
-      await postFeedTruckArrival(batchId, {
-        receive_date: datetimeLocalToApi(receiveDate),
-        fiscal_document_number: fiscalDocumentNumber,
-        actual_amount_kg: Number(actualAmountKg),
-        feed_type: feedType,
-        feed_description: feedDescription,
-        ...(feedScheduleId ? { feed_schedule_id: feedScheduleId } : {}),
-        ...(fiscalDocSk ? { fiscal_document_sk: fiscalDocSk } : {}),
-      });
+      if (initial) {
+        await updateFeedTruckArrival(batchId, initial.sk, {
+          receive_date: datetimeLocalToApi(receiveDate),
+          fiscal_document_number: fiscalDocumentNumber,
+          actual_amount_kg: Number(actualAmountKg),
+          feed_type: feedType,
+          feed_description: feedDescription,
+          feed_schedule_id: feedScheduleId || null,
+        });
+      } else {
+        await postFeedTruckArrival(batchId, {
+          receive_date: datetimeLocalToApi(receiveDate),
+          fiscal_document_number: fiscalDocumentNumber,
+          actual_amount_kg: Number(actualAmountKg),
+          feed_type: feedType,
+          feed_description: feedDescription,
+          ...(feedScheduleId ? { feed_schedule_id: feedScheduleId } : {}),
+          ...(fiscalDocSk ? { fiscal_document_sk: fiscalDocSk } : {}),
+        });
+      }
       setSuccess(true);
       setTimeout(onSuccess, 800);
     } catch (err) {
@@ -92,12 +107,12 @@ export default function FeedTruckArrivalForm({
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">{t('pigs.newFeedTruckArrival')}</h2>
+        <h2 className="modal-title">{isEdit ? t('pigs.editFeedTruckArrival', 'Editar Recebimento') : t('pigs.newFeedTruckArrival')}</h2>
 
         {success && <div className="alert alert-success">✓ {t('common.save')}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
-        {pendingDocs.length > 0 && (
+        {!isEdit && pendingDocs.length > 0 && (
           <label className="form-label">
             Preencher com NF-e
             <select onChange={(e) => handleFiscalDocSelect(e.target.value)} className="form-input" defaultValue="">

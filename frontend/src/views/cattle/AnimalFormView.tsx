@@ -11,6 +11,9 @@ import ErrorMessage from '../../components/ErrorMessage';
 const BOOLEAN_FIELDS = ['pregnant', 'implanted', 'inseminated', 'lactating', 'transferred'] as const;
 type BooleanField = (typeof BOOLEAN_FIELDS)[number];
 
+// Mirrors the backend AnimalStatus enum (value == name).
+const ANIMAL_STATUSES = ['Ativa', 'Vendida', 'Morto', 'Baixa'] as const;
+
 export default function AnimalFormView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -189,7 +192,16 @@ export default function AnimalFormView() {
 
           <label className="form-label">
             {t('cattle.status')}
-            <input type="text" value={status} onChange={(e) => setStatus(e.target.value)} className="form-input" />
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="form-input">
+              <option value="">—</option>
+              {/* Preserve an unexpected legacy value so editing doesn't silently drop it. */}
+              {status !== '' && !ANIMAL_STATUSES.includes(status as (typeof ANIMAL_STATUSES)[number]) && (
+                <option value={status}>{status}</option>
+              )}
+              {ANIMAL_STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </label>
 
           <fieldset style={{ border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: 'var(--space-sm) var(--space-md)', marginTop: 'var(--space-sm)' }}>

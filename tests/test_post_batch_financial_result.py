@@ -48,8 +48,6 @@ def _valid_body() -> dict[str, Any]:
         "cap": 2.5,
         "map_value": 3.0,
         "price_per_kg": 5.5,
-        "piglet_adjustment": 0.01,
-        "carcass_adjustment": -0.02,
     }
 
 
@@ -256,8 +254,6 @@ REQUIRED_FIELDS = [
     "cap",
     "map_value",
     "price_per_kg",
-    "piglet_adjustment",
-    "carcass_adjustment",
 ]
 
 

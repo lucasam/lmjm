@@ -22,8 +22,6 @@ export interface BorderoInput {
   cap: number;
   mapValue: number;
   pricePerKg: number;
-  pigletAdjustment: number;
-  carcassAdjustment: number;
 }
 
 export interface BorderoResult {
@@ -51,7 +49,7 @@ export interface BorderoResult {
   dailyWeightGain: number;
   dailyCarcassGain: number;
   realMortalityPct: number;
-  adjustedMortalityPct: number;
+  adjustedMortality: number;
   mortalityAdjustmentPct: number;
   conversionAdjustmentPct: number;
   integratorPct: number;
@@ -72,32 +70,37 @@ export function calculateBordero(inp: BorderoInput): BorderoResult | null {
   const pigCount = inp.housedCount - inp.mortalityCount;
   if (pigCount <= 0) return null;
 
-  // Carcass calculations
-  const carcassYieldFactor = q((inp.pigWeight - 6.629) / 1.289);
-  const pigletCarcassWeight = q(inp.pigletWeight * carcassYieldFactor);
-  const pigCarcassWeight = q(inp.pigWeight * carcassYieldFactor);
-  const totalPigletCarcass = q(pigletCarcassWeight * inp.housedCount);
-  const totalPigCarcass = q(pigCarcassWeight * pigCount);
-  const totalCarcassProduced = q(totalPigCarcass - totalPigletCarcass);
+  // Carcass calculations. Weights are carried at full precision; only the
+  // final derived fields are rounded (matches the deterministic Borderô).
+  const pigCarcassWeight = (inp.pigWeight - 6.629) / 1.289;
+  const pigletCarcassWeight = inp.pigletWeight * 0.656807 - 1.315747;
+  const carcassYieldFactor = inp.pigWeight !== 0 ? pigCarcassWeight / inp.pigWeight : 0;
+  const totalPigletCarcass = pigletCarcassWeight * inp.housedCount;
+  const totalPigCarcass = pigCarcassWeight * pigCount;
+  const totalCarcassProduced = totalPigCarcass - totalPigletCarcass;
 
   if (totalCarcassProduced <= 0) return null;
 
   // Feed conversion
-  const realConversion = q(inp.totalFeed / totalCarcassProduced);
-  const adjustedConversion = q(realConversion + inp.pigletAdjustment + inp.carcassAdjustment);
+  const realConversion = inp.totalFeed / totalCarcassProduced;
+  // Adjustments are computed (not user inputs).
+  const pigletAdjustment = (22 - inp.pigletWeight) * 0.0125;
+  const carcassAdjustment = (85 - pigCarcassWeight) * 0.0095;
+  const adjustedConversion = realConversion + pigletAdjustment + carcassAdjustment;
 
   // Mortality
   const realMortalityPct = q((inp.mortalityCount / inp.housedCount) * 100);
-  const adjustedMortalityPct = realMortalityPct;
+  // Adjusted mortality rate: days-housed (age) correction added to the real rate.
+  const adjustedMortality = q((130 - inp.daysHoused) * 0.0183 + realMortalityPct);
 
   // Integrator percentage adjustments
-  const mortalityAdjustmentPct = q(inp.mapValue - adjustedMortalityPct);
-  const conversionAdjustmentPct = q(inp.cap - adjustedConversion);
+  const mortalityAdjustmentPct = q((inp.mapValue - adjustedMortality) / 5);
+  const conversionAdjustmentPct = q((inp.cap - q(adjustedConversion)) * 10);
   const integratorPct = q(GROSS_INTEGRATOR_PCT + mortalityAdjustmentPct + conversionAdjustmentPct);
 
   // Financial result
-  const grossIncome = q(totalCarcassProduced * inp.pricePerKg * integratorPct / 100);
-  const netIncome = grossIncome;
+  const grossIncome = q(q(totalCarcassProduced) * inp.pricePerKg * integratorPct / 100);
+  const netIncome = q(grossIncome * 0.985);
 
   // Performance
   const dailyWeightGain = q((inp.pigWeight - inp.pigletWeight) / inp.daysHoused);
@@ -119,20 +122,20 @@ export function calculateBordero(inp: BorderoInput): BorderoResult | null {
     mapValue: inp.mapValue,
     pricePerKg: inp.pricePerKg,
     grossIntegratorPct: GROSS_INTEGRATOR_PCT,
-    carcassYieldFactor,
-    pigletCarcassWeight,
-    pigCarcassWeight,
-    totalPigletCarcass,
-    totalPigCarcass,
-    totalCarcassProduced,
-    realConversion,
-    pigletAdjustment: inp.pigletAdjustment,
-    carcassAdjustment: inp.carcassAdjustment,
-    adjustedConversion,
+    carcassYieldFactor: q(carcassYieldFactor),
+    pigletCarcassWeight: q(pigletCarcassWeight),
+    pigCarcassWeight: q(pigCarcassWeight),
+    totalPigletCarcass: q(totalPigletCarcass),
+    totalPigCarcass: q(totalPigCarcass),
+    totalCarcassProduced: q(totalCarcassProduced),
+    realConversion: q(realConversion),
+    pigletAdjustment: q(pigletAdjustment),
+    carcassAdjustment: q(carcassAdjustment),
+    adjustedConversion: q(adjustedConversion),
     dailyWeightGain,
     dailyCarcassGain,
     realMortalityPct,
-    adjustedMortalityPct,
+    adjustedMortality,
     mortalityAdjustmentPct,
     conversionAdjustmentPct,
     integratorPct,

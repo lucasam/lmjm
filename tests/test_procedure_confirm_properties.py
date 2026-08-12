@@ -46,13 +46,13 @@ def staged_action_st(draw: st.DrawFn) -> dict[str, Any]:
     }
 
     if action_type == ProcedureActionType.weight:
-        item["weighing_date"] = "20250115"
+        item["weighing_date"] = "2025-01-15"
         item["weight_kg"] = draw(st.integers(min_value=1, max_value=1000))
     elif action_type == ProcedureActionType.insemination:
-        item["insemination_date"] = "20250115"
+        item["insemination_date"] = "2025-01-15"
         item["semen"] = draw(st.text(min_size=1, max_size=10, alphabet="ABCDEFGHIJ"))
     elif action_type == ProcedureActionType.diagnostic:
-        item["diagnostic_date"] = "20250115"
+        item["diagnostic_date"] = "2025-01-15"
         item["pregnant"] = draw(st.booleans())
     elif action_type == ProcedureActionType.observation:
         item["note"] = draw(st.text(min_size=1, max_size=50, alphabet="abcdefghij "))
@@ -261,6 +261,7 @@ def test_confirmation_applies_actions_and_transitions_status(actions: list[dict[
         diagnostic_actions = [a for a in animal_actions if a["action_type"] == "diagnostic"]
         observation_actions = [a for a in animal_actions if a["action_type"] == "observation"]
         inspected_actions = [a for a in animal_actions if a["action_type"] == "inspected"]
+        implant_actions = [a for a in animal_actions if a["action_type"] == "implant"]
 
         # --- Weight: each weight action creates a Weight record with sk "Peso|YYYYMMDD" ---
         if weight_actions:
@@ -302,8 +303,9 @@ def test_confirmation_applies_actions_and_transitions_status(actions: list[dict[
                 )
 
         # --- Inspected: does not modify the animal record ---
+        # implant is state-changing (sets implanted, appends a note), so exclude it too.
         if inspected_actions and not any([
-            weight_actions, insemination_actions, diagnostic_actions, observation_actions
+            weight_actions, insemination_actions, diagnostic_actions, observation_actions, implant_actions
         ]):
             # If the ONLY actions for this animal are inspected, the animal should be unchanged
             before = snapshots_before[ear_tag]
@@ -337,13 +339,13 @@ def staged_action_mixed_st(draw: st.DrawFn) -> dict[str, Any]:
     }
 
     if action_type == ProcedureActionType.weight:
-        item["weighing_date"] = "20250115"
+        item["weighing_date"] = "2025-01-15"
         item["weight_kg"] = draw(st.integers(min_value=1, max_value=1000))
     elif action_type == ProcedureActionType.insemination:
-        item["insemination_date"] = "20250115"
+        item["insemination_date"] = "2025-01-15"
         item["semen"] = draw(st.text(min_size=1, max_size=10, alphabet="ABCDEFGHIJ"))
     elif action_type == ProcedureActionType.diagnostic:
-        item["diagnostic_date"] = "20250115"
+        item["diagnostic_date"] = "2025-01-15"
         item["pregnant"] = draw(st.booleans())
     elif action_type == ProcedureActionType.observation:
         item["note"] = draw(st.text(min_size=1, max_size=50, alphabet="abcdefghij "))

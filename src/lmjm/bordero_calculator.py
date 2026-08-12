@@ -19,8 +19,6 @@ class BorderoInput:
     cap: Decimal
     map_value: Decimal
     price_per_kg: Decimal
-    piglet_adjustment: Decimal
-    carcass_adjustment: Decimal
 
 
 def _q(value: Decimal) -> Decimal:
@@ -38,33 +36,48 @@ def calculate_bordero(inp: BorderoInput) -> BatchFinancialResult:
     # Farm data
     pig_count = inp.housed_count - inp.mortality_count
 
-    # Carcass calculations
-    carcass_yield_factor = _q((inp.pig_weight - Decimal("6.629")) / Decimal("1.289"))
-    piglet_carcass_weight = _q(inp.piglet_weight * carcass_yield_factor)
-    pig_carcass_weight = _q(inp.pig_weight * carcass_yield_factor)
-    total_piglet_carcass = _q(piglet_carcass_weight * inp.housed_count)
-    total_pig_carcass = _q(pig_carcass_weight * pig_count)
-    total_carcass_produced = _q(total_pig_carcass - total_piglet_carcass)
+    # Carcass calculations. Weights are carried at full precision (only the
+    # stored fields are quantized) so the deterministic totals match exactly.
+    pig_carcass_weight_raw = (inp.pig_weight - Decimal("6.629")) / Decimal("1.289")
+    piglet_carcass_weight_raw = inp.piglet_weight * Decimal("0.656807") - Decimal("1.315747")
+    carcass_yield_factor = _q(pig_carcass_weight_raw / inp.pig_weight)
+    piglet_carcass_weight = _q(piglet_carcass_weight_raw)
+    pig_carcass_weight = _q(pig_carcass_weight_raw)
+    total_piglet_carcass_raw = piglet_carcass_weight_raw * inp.housed_count
+    total_pig_carcass_raw = pig_carcass_weight_raw * pig_count
+    total_carcass_produced_raw = total_pig_carcass_raw - total_piglet_carcass_raw
+    total_piglet_carcass = _q(total_piglet_carcass_raw)
+    total_pig_carcass = _q(total_pig_carcass_raw)
+    total_carcass_produced = _q(total_carcass_produced_raw)
 
     if total_carcass_produced <= 0:
         raise ValueError("Total carcass produced must be positive")
 
     # Feed conversion
-    real_conversion = _q(inp.total_feed / total_carcass_produced)
-    adjusted_conversion = _q(real_conversion + inp.piglet_adjustment + inp.carcass_adjustment)
+    real_conversion_raw = inp.total_feed / total_carcass_produced_raw
+    real_conversion = _q(real_conversion_raw)
+    # Adjustments are computed (not user inputs).
+    piglet_adjustment_raw = (Decimal("22") - inp.piglet_weight) * Decimal("0.0125")
+    carcass_adjustment_raw = (Decimal("85") - pig_carcass_weight_raw) * Decimal("0.0095")
+    piglet_adjustment = _q(piglet_adjustment_raw)
+    carcass_adjustment = _q(carcass_adjustment_raw)
+    adjusted_conversion = _q(real_conversion_raw + piglet_adjustment_raw + carcass_adjustment_raw)
 
     # Mortality
     real_mortality_pct = _q(Decimal(inp.mortality_count) / Decimal(inp.housed_count) * 100)
-    adjusted_mortality_pct = real_mortality_pct
+    # Adjusted mortality rate: days-housed (age) correction added to the real rate.
+    adjusted_mortality = _q(
+        (Decimal("130") - Decimal(inp.days_housed)) * Decimal("0.0183") + real_mortality_pct
+    )
 
-    # Integrator percentage adjustments (standard Borderô approach)
-    mortality_adjustment_pct = _q(inp.map_value - adjusted_mortality_pct)
-    conversion_adjustment_pct = _q(inp.cap - adjusted_conversion)
+    # Integrator percentage adjustments
+    mortality_adjustment_pct = _q((inp.map_value - adjusted_mortality) / Decimal("5"))
+    conversion_adjustment_pct = _q((inp.cap - adjusted_conversion) * Decimal("10"))
     integrator_pct = _q(GROSS_INTEGRATOR_PCT + mortality_adjustment_pct + conversion_adjustment_pct)
 
     # Financial result
     gross_income = _q(total_carcass_produced * inp.price_per_kg * integrator_pct / 100)
-    net_income = gross_income
+    net_income = _q(gross_income * Decimal("0.985"))
 
     # Performance
     daily_weight_gain = _q((inp.pig_weight - inp.piglet_weight) / Decimal(inp.days_housed))
@@ -95,13 +108,13 @@ def calculate_bordero(inp: BorderoInput) -> BatchFinancialResult:
         total_pig_carcass=total_pig_carcass,
         total_carcass_produced=total_carcass_produced,
         real_conversion=real_conversion,
-        piglet_adjustment=inp.piglet_adjustment,
-        carcass_adjustment=inp.carcass_adjustment,
+        piglet_adjustment=piglet_adjustment,
+        carcass_adjustment=carcass_adjustment,
         adjusted_conversion=adjusted_conversion,
         daily_weight_gain=daily_weight_gain,
         daily_carcass_gain=daily_carcass_gain,
         real_mortality_pct=real_mortality_pct,
-        adjusted_mortality_pct=adjusted_mortality_pct,
+        adjusted_mortality=adjusted_mortality,
         mortality_adjustment_pct=mortality_adjustment_pct,
         conversion_adjustment_pct=conversion_adjustment_pct,
         integrator_pct=integrator_pct,

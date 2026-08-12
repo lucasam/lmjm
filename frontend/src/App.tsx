@@ -7,6 +7,8 @@ import SpeciesSelectionView from './views/SpeciesSelectionView';
 import AnimalListView from './views/cattle/AnimalListView';
 import AnimalDetailView from './views/cattle/AnimalDetailView';
 import AnimalFormView from './views/cattle/AnimalFormView';
+import SellListView from './views/cattle/SellListView';
+import SellFormView from './views/cattle/SellFormView';
 import ProcedureListView from './views/cattle/ProcedureListView';
 import ProcedureCreateView from './views/cattle/ProcedureCreateView';
 import ProcedureDetailView from './views/cattle/ProcedureDetailView';
@@ -17,6 +19,7 @@ import MedicationShotMonthlyView from './views/pigs/MedicationShotMonthlyView';
 import MortalityWeeklyView from './views/pigs/MortalityWeeklyView';
 import FeedConsumptionDataView from './views/pigs/FeedConsumptionDataView';
 import FeedBalanceForecastView from './views/pigs/FeedBalanceForecastView';
+import FeedTruckArrivalView from './views/pigs/FeedTruckArrivalView';
 import FeedScheduleFullView from './views/pigs/FeedScheduleFullView';
 import FiscalDocumentListView from './views/pigs/FiscalDocumentListView';
 import IntegratorWeeklyDataView from './views/pigs/IntegratorWeeklyDataView';
@@ -107,6 +110,30 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/cattle/sells"
+        element={
+          <ProtectedRoute>
+            <SellListView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/sells/new"
+        element={
+          <ProtectedRoute>
+            <SellFormView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cattle/sells/:sellId/edit"
+        element={
+          <ProtectedRoute>
+            <SellFormView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/cattle/procedures"
         element={
           <ProtectedRoute>
@@ -191,6 +218,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <FeedBalanceForecastView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pigs/batches/:batchId/feed-truck-arrivals"
+        element={
+          <ProtectedRoute>
+            <FeedTruckArrivalView />
           </ProtectedRoute>
         }
       />

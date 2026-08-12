@@ -163,21 +163,24 @@ export default function BatchDetailView() {
     { header: t('pigs.status'), accessor: (r) => translateScheduleStatus(r.status ?? 'scheduled') },
   ];
 
-  const feedTrucksWithCumulative = useMemo(() => {
-    const data = feedTrucks ?? [];
-    let cumulative = 0;
-    return data.map((r) => {
-      cumulative += r.actual_amount_kg;
-      return { ...r, cumulativeAmountKg: cumulative };
-    });
+  // Batch view shows only the last 10 arrivals, sorted by fiscal document
+  // number descending. The full list lives in FeedTruckArrivalView.
+  const recentFeedTrucks = useMemo(() => {
+    return [...(feedTrucks ?? [])]
+      .sort((a, b) => {
+        const na = Number(a.fiscal_document_number);
+        const nb = Number(b.fiscal_document_number);
+        if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return nb - na;
+        return b.fiscal_document_number.localeCompare(a.fiscal_document_number);
+      })
+      .slice(0, 10);
   }, [feedTrucks]);
 
-  const feedTruckCols: Column<FeedTruckArrival & { cumulativeAmountKg: number }>[] = [
+  const feedTruckCols: Column<FeedTruckArrival>[] = [
     { header: t('pigs.receiveDate'), accessor: (r) => formatDate(r.receive_date) },
     { header: t('pigs.fiscalDocumentNumber'), accessor: (r) => r.fiscal_document_number },
     { header: t('pigs.feedType'), accessor: (r) => `${r.feed_type} — ${r.feed_description || getFeedTypeDescription(r.feed_type)}` },
     { header: t('pigs.actualAmountKg'), accessor: (r) => formatNumber(r.actual_amount_kg) },
-    { header: 'Acumulado (kg)', accessor: (r) => formatNumber(r.cumulativeAmountKg) },
     { header: t('pigs.scheduledDate', 'Agendamento'), accessor: (r) => {
       if (!r.feed_schedule_id) return '—';
       const matched = (schedule ?? []).find(s => s.sk === r.feed_schedule_id);
@@ -347,9 +350,14 @@ export default function BatchDetailView() {
             </button>
           </div>
 
-          {/* Feed truck arrivals */}
+          {/* Feed truck arrivals (last 10 by fiscal document desc) */}
           <h2 className="section-title">{t('pigs.feedTruckArrivals')}</h2>
-          <DataTable columns={feedTruckCols} data={feedTrucksWithCumulative} keyExtractor={(r) => r.sk} />
+          <DataTable columns={feedTruckCols} data={recentFeedTrucks} keyExtractor={(r) => r.sk} />
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/pigs/batches/${encodeURIComponent(id)}/feed-truck-arrivals`)}>
+              {t('common.all', 'Ver tudo')} →
+            </button>
+          </div>
 
           {/* Pig truck arrivals */}
           <h2 className="section-title">{t('pigs.pigTruckArrivals')}</h2>
@@ -432,6 +440,7 @@ export default function BatchDetailView() {
           batch={batch}
           weeklyDataRecords={weeklyData ?? []}
           existingResult={financialResults?.find((r) => r.type === 'simulation') ?? financialResults?.[0]}
+          mortalityCount={mortalities?.length ?? 0}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); rFinancialResults(); }}
         />

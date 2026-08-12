@@ -30,8 +30,6 @@ REQUIRED_FIELDS = [
     "cap",
     "map_value",
     "price_per_kg",
-    "piglet_adjustment",
-    "carcass_adjustment",
 ]
 
 VALID_TYPES = ("simulation", "actual")
@@ -68,8 +66,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             cap=Decimal(str(body["cap"])),
             map_value=Decimal(str(body["map_value"])),
             price_per_kg=Decimal(str(body["price_per_kg"])),
-            piglet_adjustment=Decimal(str(body["piglet_adjustment"])),
-            carcass_adjustment=Decimal(str(body["carcass_adjustment"])),
         )
         result = calculate_bordero(bordero_input)
     except (ValueError, InvalidOperation) as e:

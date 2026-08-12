@@ -15,6 +15,8 @@ interface BorderoFormProps {
   batch: Batch;
   weeklyDataRecords: IntegratorWeeklyData[];
   existingResult?: BatchFinancialResult;
+  /** Number of mortality records for the batch (default for mortality_count). */
+  mortalityCount?: number;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -39,6 +41,7 @@ export default function BorderoForm({
   batch,
   weeklyDataRecords,
   existingResult,
+  mortalityCount: batchMortalityCount,
   onClose,
   onSaved,
 }: BorderoFormProps) {
@@ -47,7 +50,8 @@ export default function BorderoForm({
 
   // --- Derive defaults from batch ---
   const defaultHousedCount = existingResult?.housed_count ?? batch.total_animal_count ?? 0;
-  const defaultMortalityCount = existingResult?.mortality_count ?? 0;
+  // Mortality defaults to the batch's recorded mortality count (still editable).
+  const defaultMortalityCount = existingResult?.mortality_count ?? batchMortalityCount ?? 0;
   const defaultTotalFeed = existingResult?.total_feed ?? 0;
   const defaultPigletWeight = existingResult?.piglet_weight ?? batch.initial_animal_weight ?? '';
   const defaultDaysHoused = existingResult?.days_housed ?? (() => {
@@ -90,12 +94,6 @@ export default function BorderoForm({
     existingResult?.map_value != null ? String(existingResult.map_value) : suggestedCapMap ? String(suggestedCapMap.map) : '',
   );
   const [pricePerKg, setPricePerKg] = useState(existingResult?.price_per_kg != null ? String(existingResult.price_per_kg) : '');
-  const [pigletAdjustment, setPigletAdjustment] = useState(
-    existingResult?.piglet_adjustment != null ? String(existingResult.piglet_adjustment) : '0',
-  );
-  const [carcassAdjustment, setCarcassAdjustment] = useState(
-    existingResult?.carcass_adjustment != null ? String(existingResult.carcass_adjustment) : '0',
-  );
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,8 +110,6 @@ export default function BorderoForm({
     const c = Number(cap);
     const mv = Number(mapValue);
     const ppk = Number(pricePerKg);
-    const pa = Number(pigletAdjustment);
-    const ca = Number(carcassAdjustment);
 
     if (!h || !pgw || !dh) return null;
 
@@ -127,10 +123,8 @@ export default function BorderoForm({
       cap: c,
       mapValue: mv,
       pricePerKg: ppk,
-      pigletAdjustment: pa,
-      carcassAdjustment: ca,
     });
-  }, [housedCount, mortalityCount, totalFeed, pigletWeight, pigWeight, daysHoused, cap, mapValue, pricePerKg, pigletAdjustment, carcassAdjustment]);
+  }, [housedCount, mortalityCount, totalFeed, pigletWeight, pigWeight, daysHoused, cap, mapValue, pricePerKg]);
 
   // --- Submit ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,8 +143,6 @@ export default function BorderoForm({
         cap: Number(cap),
         map_value: Number(mapValue),
         price_per_kg: Number(pricePerKg),
-        piglet_adjustment: Number(pigletAdjustment),
-        carcass_adjustment: Number(carcassAdjustment),
       });
       setSuccess(true);
       setTimeout(onSaved, 800);
@@ -259,16 +251,6 @@ export default function BorderoForm({
             <input type="number" required min="0" step="any" value={pigWeight} onChange={(e) => setPigWeight(e.target.value)} className="form-input" />
           </label>
 
-          <label className="form-label">
-            {t('pigs.pigletAdjustmentField', 'Ajuste Leitão')}
-            <input type="number" step="any" value={pigletAdjustment} onChange={(e) => setPigletAdjustment(e.target.value)} className="form-input" />
-          </label>
-
-          <label className="form-label">
-            {t('pigs.carcassAdjustmentField', 'Ajuste Carcaça')}
-            <input type="number" step="any" value={carcassAdjustment} onChange={(e) => setCarcassAdjustment(e.target.value)} className="form-input" />
-          </label>
-
           {/* Live preview panel */}
           <h3 className="section-title" style={{ fontSize: '1rem', marginTop: '1rem' }}>
             {t('pigs.livePreview', 'Prévia')}
@@ -279,8 +261,13 @@ export default function BorderoForm({
             <PreviewRow label={t('pigs.carcassYieldFactor', 'Fator Rendimento')} value={fmt(preview?.carcassYieldFactor)} />
             <PreviewRow label={t('pigs.totalCarcassProduced', 'Carcaça Produzida (kg)')} value={fmt(preview?.totalCarcassProduced, 2)} />
             <PreviewRow label={t('pigs.realConversion', 'CA Real')} value={fmt(preview?.realConversion)} />
+            <PreviewRow label={t('pigs.pigletAdjustmentField', 'Ajuste Leitão')} value={fmt(preview?.pigletAdjustment)} />
+            <PreviewRow label={t('pigs.carcassAdjustmentField', 'Ajuste Carcaça')} value={fmt(preview?.carcassAdjustment)} />
             <PreviewRow label={t('pigs.adjustedConversion', 'CA Ajustada')} value={fmt(preview?.adjustedConversion)} />
             <PreviewRow label={t('pigs.realMortalityPct', 'Mortalidade Real (%)')} value={fmt(preview?.realMortalityPct, 2)} />
+            <PreviewRow label={t('pigs.adjustedMortality', 'Mortalidade Ajustada')} value={fmt(preview?.adjustedMortality)} />
+            <PreviewRow label={t('pigs.mortalityAdjustmentPct', 'Ajuste Mortalidade')} value={fmt(preview?.mortalityAdjustmentPct)} />
+            <PreviewRow label={t('pigs.conversionAdjustmentPct', 'Ajuste Conversão')} value={fmt(preview?.conversionAdjustmentPct)} />
             <PreviewRow label={t('pigs.dailyWeightGain', 'GPD (kg)')} value={fmt(preview?.dailyWeightGain)} />
             <PreviewRow label={t('pigs.integratorPct', '% Integrado')} value={fmt(preview?.integratorPct)} />
             <PreviewRow

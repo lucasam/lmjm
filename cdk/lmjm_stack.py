@@ -72,6 +72,19 @@ class LmjmStack(Stack):
             ),
         )
 
+        # Single shared execution role for all Lambda functions in this stack.
+        # Using one role (instead of an auto-generated role + policy per function)
+        # keeps the stack under the CloudFormation 500-resource limit. Table and
+        # bucket permissions are granted once to this role below.
+        lambda_role = iam.Role(
+            self,
+            "SharedLambdaRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"),
+            ],
+        )
+
         _lambda.Function(
             self,
             "LmjmFunction",
@@ -80,6 +93,7 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.handler.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
         )
 
         table = dynamodb.Table(
@@ -89,12 +103,18 @@ class LmjmStack(Stack):
             partition_key=dynamodb.Attribute(name="pk", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="sk", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            point_in_time_recovery_specification=dynamodb.PointInTimeRecoverySpecification(
+                point_in_time_recovery_enabled=True,
+            ),
         )
         table.add_global_secondary_index(
             index_name="ear_tag-sk-index",
             partition_key=dynamodb.Attribute(name="ear_tag", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="sk", type=dynamodb.AttributeType.STRING),
         )
+
+        # Grant table access once to the shared role (replaces per-function grants).
+        table.grant_read_write_data(lambda_role)
 
         # --- S3 + CloudFront for frontend hosting ---
 
@@ -185,9 +205,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.pre_signup.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(pre_signup_lambda)
 
         user_pool = cognito.UserPool(
             self,
@@ -277,9 +297,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_diagnostic.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_diagnostic)
 
         post_insemination = _lambda.Function(
             self,
@@ -289,9 +309,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_insemination.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_insemination)
 
         # --- API Gateway REST API with Cognito Authorizer ---
 
@@ -360,9 +380,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_cattle_animals.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_cattle_animals)
 
         get_cattle_animal = _lambda.Function(
             self,
@@ -372,9 +392,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_cattle_animal.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_cattle_animal)
 
         get_inseminations = _lambda.Function(
             self,
@@ -384,9 +404,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_inseminations.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_inseminations)
 
         get_diagnostics_lambda = _lambda.Function(
             self,
@@ -396,9 +416,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_diagnostics.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_diagnostics_lambda)
 
         # --- Cattle Weight Lambdas ---
 
@@ -410,9 +430,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_weights.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_weights)
 
         post_weight = _lambda.Function(
             self,
@@ -422,9 +442,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_weight.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_weight)
 
         put_ear_tag = _lambda.Function(
             self,
@@ -434,9 +454,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_ear_tag.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_ear_tag)
 
         post_cattle_animal = _lambda.Function(
             self,
@@ -446,9 +466,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_cattle_animal.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_cattle_animal)
 
         put_cattle_animal = _lambda.Function(
             self,
@@ -458,9 +478,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_cattle_animal.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_cattle_animal)
 
         post_animal_note = _lambda.Function(
             self,
@@ -470,9 +490,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_animal_note.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_animal_note)
 
         post_animal_tag = _lambda.Function(
             self,
@@ -482,9 +502,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_animal_tag.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_animal_tag)
 
         # --- Cattle API Gateway Routes ---
 
@@ -525,6 +545,66 @@ class LmjmStack(Stack):
         add_cognito_method(cattle_pesos_resource, "GET", apigw.LambdaIntegration(get_weights))
         add_cognito_method(cattle_pesos_resource, "POST", apigw.LambdaIntegration(post_weight))
 
+        # --- Cattle Sell Lambdas ---
+
+        post_sell = _lambda.Function(
+            self,
+            "PostSellLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.post_sell.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
+
+        get_sells = _lambda.Function(
+            self,
+            "GetSellsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_sells.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
+
+        get_sell = _lambda.Function(
+            self,
+            "GetSellLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.get_sell.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
+
+        put_sell = _lambda.Function(
+            self,
+            "PutSellLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.put_sell.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
+
+        # /cattle/sells
+        cattle_sells_resource = cattle_resource.add_resource("sells")
+        add_cognito_method(cattle_sells_resource, "GET", apigw.LambdaIntegration(get_sells))
+        add_cognito_method(cattle_sells_resource, "POST", apigw.LambdaIntegration(post_sell))
+
+        # /cattle/sells/{sell_id}
+        cattle_sell_resource = cattle_sells_resource.add_resource("{sell_id}")
+        add_cognito_method(cattle_sell_resource, "GET", apigw.LambdaIntegration(get_sell))
+        add_cognito_method(cattle_sell_resource, "PUT", apigw.LambdaIntegration(put_sell))
+
         # --- Cattle Procedure Lambdas ---
 
         post_procedure = _lambda.Function(
@@ -535,9 +615,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_procedure.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_procedure)
 
         get_procedures = _lambda.Function(
             self,
@@ -547,9 +627,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_procedures.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_procedures)
 
         get_procedure = _lambda.Function(
             self,
@@ -559,9 +639,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_procedure.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_procedure)
 
         post_procedure_action = _lambda.Function(
             self,
@@ -571,9 +651,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_procedure_action.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_procedure_action)
 
         delete_procedure_action = _lambda.Function(
             self,
@@ -583,9 +663,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.delete_procedure_action.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(delete_procedure_action)
 
         post_procedure_confirm = _lambda.Function(
             self,
@@ -595,9 +675,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_procedure_confirm.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_procedure_confirm)
 
         post_procedure_cancel = _lambda.Function(
             self,
@@ -607,9 +687,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_procedure_cancel.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_procedure_cancel)
 
         # --- Cattle Procedure API Gateway Routes ---
 
@@ -648,9 +728,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_modules.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_modules)
 
         get_module = _lambda.Function(
             self,
@@ -660,9 +740,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_module.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_module)
 
         put_module = _lambda.Function(
             self,
@@ -672,9 +752,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_module.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_module)
 
         # --- Pig Batch Lambdas ---
 
@@ -686,9 +766,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_batches.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_batches)
 
         get_batch = _lambda.Function(
             self,
@@ -698,9 +778,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_batch.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_batch)
 
         post_batch = _lambda.Function(
             self,
@@ -710,9 +790,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_batch.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_batch)
 
         put_batch = _lambda.Function(
             self,
@@ -722,9 +802,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_batch.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_batch)
 
         # --- Pig Feed Lambdas ---
 
@@ -736,9 +816,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_feed_truck_arrival.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_feed_truck_arrival)
 
         get_feed_truck_arrivals = _lambda.Function(
             self,
@@ -748,9 +828,33 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_truck_arrivals.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_truck_arrivals)
+
+        put_feed_truck_arrival = _lambda.Function(
+            self,
+            "PutFeedTruckArrivalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.put_feed_truck_arrival.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
+
+        delete_feed_truck_arrival = _lambda.Function(
+            self,
+            "DeleteFeedTruckArrivalLambda",
+            runtime=_lambda.Runtime.PYTHON_3_12,
+            timeout=Duration.seconds(30),
+            memory_size=2048,
+            handler="lmjm.delete_feed_truck_arrival.lambda_handler",
+            code=lambda_code,
+            role=lambda_role,
+            environment={"TABLE_NAME": table.table_name},
+        )
 
         get_feed_schedule = _lambda.Function(
             self,
@@ -760,9 +864,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_schedule.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_schedule)
 
         put_feed_schedule = _lambda.Function(
             self,
@@ -772,9 +876,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_feed_schedule.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_feed_schedule)
 
         # --- Pig Truck Arrival Lambdas ---
 
@@ -786,9 +890,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_pig_truck_arrival.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_pig_truck_arrival)
 
         get_pig_truck_arrivals = _lambda.Function(
             self,
@@ -798,9 +902,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_pig_truck_arrivals.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_pig_truck_arrivals)
 
         put_pig_truck_arrival = _lambda.Function(
             self,
@@ -810,9 +914,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_pig_truck_arrival.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_pig_truck_arrival)
 
         # --- Batch Start Summary Lambda ---
 
@@ -824,9 +928,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_batch_start_summary.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_batch_start_summary)
 
         # --- Mortality Lambdas ---
 
@@ -838,9 +942,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_mortality.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_mortality)
 
         get_mortalities = _lambda.Function(
             self,
@@ -850,9 +954,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_mortalities.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_mortalities)
 
         # --- Medication Lambdas ---
 
@@ -864,9 +968,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_medication.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_medication)
 
         get_medications = _lambda.Function(
             self,
@@ -876,9 +980,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_medications.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_medications)
 
         post_medication_shot = _lambda.Function(
             self,
@@ -888,9 +992,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_medication_shot.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_medication_shot)
 
         get_medication_shots = _lambda.Function(
             self,
@@ -900,9 +1004,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_medication_shots.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_medication_shots)
 
         # --- Feed Consumption Plan Lambdas ---
 
@@ -914,9 +1018,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.put_feed_consumption_plan.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(put_feed_consumption_plan)
 
         get_feed_consumption_plan = _lambda.Function(
             self,
@@ -926,9 +1030,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_consumption_plan.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_consumption_plan)
 
         # --- Feed Consumption Template Lambdas ---
 
@@ -940,9 +1044,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_consumption_templates.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_consumption_templates)
 
         post_feed_consumption_template = _lambda.Function(
             self,
@@ -952,9 +1056,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_feed_consumption_template.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_feed_consumption_template)
 
         # --- Generate Feed Plan Lambda ---
 
@@ -966,9 +1070,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_generate_feed_plan.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_generate_feed_plan)
 
         # --- Feed Schedule Suggestions Lambda ---
 
@@ -980,9 +1084,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_feed_schedule_suggestions.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(post_feed_schedule_suggestions)
         post_feed_schedule_suggestions.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
@@ -1000,9 +1104,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_feed_balance.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_feed_balance)
 
         get_feed_balances = _lambda.Function(
             self,
@@ -1012,9 +1116,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_balances.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_balances)
 
         delete_feed_balance = _lambda.Function(
             self,
@@ -1024,9 +1128,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.delete_feed_balance.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(delete_feed_balance)
 
         # --- Batch Financial Result Lambdas ---
 
@@ -1038,9 +1142,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_batch_financial_result.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_batch_financial_result)
 
         get_batch_financial_results = _lambda.Function(
             self,
@@ -1050,9 +1154,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_batch_financial_results.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_batch_financial_results)
 
         # --- Integrator Weekly Data Lambdas ---
 
@@ -1064,9 +1168,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_integrator_weekly_data.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_integrator_weekly_data)
 
         get_integrator_weekly_data = _lambda.Function(
             self,
@@ -1076,9 +1180,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_integrator_weekly_data.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_integrator_weekly_data)
 
         # --- Fiscal Email Intake ---
 
@@ -1098,13 +1202,13 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.process_fiscal_email.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={
                 "TABLE_NAME": table.table_name,
                 "EMAIL_BUCKET": fiscal_email_bucket.bucket_name,
             },
         )
-        table.grant_read_write_data(process_fiscal_email)
-        fiscal_email_bucket.grant_read(process_fiscal_email)
+        fiscal_email_bucket.grant_read(lambda_role)
 
         receipt_rule_set = ses.ReceiptRuleSet(self, "FiscalEmailRuleSet")
         receipt_rule_set.add_rule(
@@ -1133,9 +1237,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_fiscal_documents.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_fiscal_documents)
 
         get_feed_schedule_fiscal_documents = _lambda.Function(
             self,
@@ -1145,9 +1249,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_feed_schedule_fiscal_documents.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_feed_schedule_fiscal_documents)
 
         get_raw_material_types = _lambda.Function(
             self,
@@ -1157,9 +1261,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_raw_material_types.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_raw_material_types)
 
         post_raw_material_type = _lambda.Function(
             self,
@@ -1169,9 +1273,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.post_raw_material_type.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(post_raw_material_type)
 
         # --- Pig API Gateway Routes ---
 
@@ -1198,6 +1302,11 @@ class LmjmStack(Stack):
         feed_truck_arrivals_resource = batch_resource.add_resource("feed-truck-arrivals")
         add_cognito_method(feed_truck_arrivals_resource, "POST", apigw.LambdaIntegration(post_feed_truck_arrival))
         add_cognito_method(feed_truck_arrivals_resource, "GET", apigw.LambdaIntegration(get_feed_truck_arrivals))
+
+        # /pigs/batches/{batch_id}/feed-truck-arrivals/{arrival_sk}
+        feed_truck_arrival_resource = feed_truck_arrivals_resource.add_resource("{arrival_sk}")
+        add_cognito_method(feed_truck_arrival_resource, "PUT", apigw.LambdaIntegration(put_feed_truck_arrival))
+        add_cognito_method(feed_truck_arrival_resource, "DELETE", apigw.LambdaIntegration(delete_feed_truck_arrival))
 
         # /pigs/batches/{batch_id}/feed-schedule
         feed_schedule_resource = batch_resource.add_resource("feed-schedule")
@@ -1302,9 +1411,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.get_all_fiscal_documents.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_data(get_all_fiscal_documents)
 
         reprocess_fiscal_document = _lambda.Function(
             self,
@@ -1314,9 +1423,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.reprocess_fiscal_document.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name, "EMAIL_BUCKET": fiscal_email_bucket.bucket_name},
         )
-        table.grant_read_write_data(reprocess_fiscal_document)
 
         delete_fiscal_document = _lambda.Function(
             self,
@@ -1326,9 +1435,9 @@ class LmjmStack(Stack):
             memory_size=2048,
             handler="lmjm.delete_fiscal_document.lambda_handler",
             code=lambda_code,
+            role=lambda_role,
             environment={"TABLE_NAME": table.table_name},
         )
-        table.grant_read_write_data(delete_fiscal_document)
 
         # /fiscal-documents (top-level)
         all_fiscal_documents_resource = api.root.add_resource("fiscal-documents")

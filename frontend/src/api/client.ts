@@ -22,6 +22,7 @@ import type {
   Procedure,
   ProcedureDetail,
   ConfirmProcedureResult,
+  Sell,
 } from '../types/models';
 
 // Request types for POST/PUT operations
@@ -373,6 +374,30 @@ export function listFeedTruckArrivals(batchId: string): Promise<FeedTruckArrival
   return get<FeedTruckArrival[]>(`/pigs/batches/${encodeURIComponent(batchId)}/feed-truck-arrivals`);
 }
 
+export interface UpdateFeedTruckArrivalRequest {
+  receive_date?: string;
+  fiscal_document_number?: string;
+  actual_amount_kg?: number;
+  feed_type?: string;
+  feed_description?: string;
+  feed_schedule_id?: string | null;
+}
+
+export function updateFeedTruckArrival(
+  batchId: string,
+  arrivalSk: string,
+  data: UpdateFeedTruckArrivalRequest,
+): Promise<void> {
+  return put(`/pigs/batches/${encodeURIComponent(batchId)}/feed-truck-arrivals/${encodeURIComponent(arrivalSk)}`, data);
+}
+
+export async function deleteFeedTruckArrival(batchId: string, arrivalSk: string): Promise<void> {
+  await fetchWithAuth(
+    `/pigs/batches/${encodeURIComponent(batchId)}/feed-truck-arrivals/${encodeURIComponent(arrivalSk)}`,
+    { method: 'DELETE' },
+  );
+}
+
 export function postPigTruckArrival(batchId: string, data: PostPigTruckArrivalRequest): Promise<void> {
   return post(`/pigs/batches/${encodeURIComponent(batchId)}/pig-truck-arrivals`, data);
 }
@@ -601,4 +626,47 @@ export async function cancelProcedure(procedureId: string): Promise<void> {
   await fetchWithAuth(`/cattle/procedures/${encodeURIComponent(procedureId)}/cancel`, {
     method: 'POST',
   });
+}
+
+// --- Cattle Sells ---
+
+export interface SellPayload {
+  sell_date: string; // YYYYMMDD
+  number_of_animals: number;
+  animal_age?: number | null;
+  sex?: 'M' | 'F' | null;
+  batch?: string | null;
+  description?: string | null;
+  buyer?: string | null;
+  average_weight?: number;
+  unit_value?: number;
+  total_value?: number;
+  total_commission?: number;
+  total_transportation?: number;
+  price_per_arroba?: number;
+  associated_ear_tags?: string[] | null;
+}
+
+export function listSells(): Promise<Sell[]> {
+  return get<Sell[]>('/cattle/sells');
+}
+
+export function getSell(sellId: string): Promise<Sell> {
+  return get<Sell>(`/cattle/sells/${encodeURIComponent(sellId)}`);
+}
+
+export async function createSell(data: SellPayload): Promise<Sell> {
+  const response = await fetchWithAuth('/cattle/sells', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json() as Promise<Sell>;
+}
+
+export async function updateSell(sellId: string, data: SellPayload): Promise<Sell> {
+  const response = await fetchWithAuth(`/cattle/sells/${encodeURIComponent(sellId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return response.json() as Promise<Sell>;
 }

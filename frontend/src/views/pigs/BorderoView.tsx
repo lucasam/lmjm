@@ -117,7 +117,7 @@ export default function BorderoView({ results }: BorderoViewProps) {
             colSpan={columns.length + 1}
           />
           <Row label={t('pigs.realMortalityPct', 'Mortalidade Real (%)')} columns={columns} render={(r) => formatNumber(r.real_mortality_pct, 2) + '%'} />
-          <Row label={t('pigs.adjustedMortalityPct', 'Mortalidade Ajustada (%)')} columns={columns} render={(r) => formatNumber(r.adjusted_mortality_pct, 2) + '%'} />
+          <Row label={t('pigs.adjustedMortality', 'Mortalidade Ajustada')} columns={columns} render={(r) => formatNumber(r.adjusted_mortality, 4)} />
 
           {/* Percentual do Integrado */}
           <SectionHeader

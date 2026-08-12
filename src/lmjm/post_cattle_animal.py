@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 import boto3
 
-from lmjm.model import Animal
+from lmjm.model import Animal, AnimalStatus
 from lmjm.repo import AnimalRepo
 from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 from lmjm.util.response import respond
@@ -48,6 +48,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if not ear_tag:
         return respond(status_code=400, error="ear_tag must be non-empty")
 
+    status: Optional[AnimalStatus] = None
+    if request.status is not None:
+        try:
+            status = AnimalStatus(request.status)
+        except ValueError:
+            valid = ", ".join(s.value for s in AnimalStatus)
+            return respond(status_code=400, error=f"Invalid status '{request.status}'. Valid values: {valid}")
+
     # Ear tags must be unique (GSI lookups assume uniqueness).
     if animal_repo.get_by_ear_tag(ear_tag):
         return respond(status_code=409, error=f"Ear tag {ear_tag} is already in use")
@@ -62,7 +70,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         birth_date=request.birth_date,
         mother=request.mother,
         batch=request.batch,
-        status=request.status,
+        status=status,
         pregnant=request.pregnant,
         implanted=request.implanted,
         inseminated=request.inseminated,

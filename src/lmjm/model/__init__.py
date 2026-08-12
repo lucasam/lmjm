@@ -1,4 +1,4 @@
-from lmjm.model.animal import Animal
+from lmjm.model.animal import Animal, AnimalStatus
 from lmjm.model.batch import Batch
 from lmjm.model.batch_financial_result import BatchFinancialResult
 from lmjm.model.diagnostic import Diagnostic
@@ -25,10 +25,13 @@ from lmjm.model.pig_truck_arrival import PigTruckArrival
 from lmjm.model.procedure import Procedure, ProcedureStatus
 from lmjm.model.procedure_action import ProcedureAction, ProcedureActionType
 from lmjm.model.raw_material_type import RawMaterialType
+from lmjm.model.sell import Sell
+from lmjm.model.sex import Sex
 from lmjm.model.weight import Weight
 
 __all__ = [
     "Animal",
+    "AnimalStatus",
     "Batch",
     "BatchFinancialResult",
     "DailyBalance",
@@ -54,6 +57,8 @@ __all__ = [
     "ProcedureActionType",
     "ProcedureStatus",
     "RawMaterialType",
+    "Sell",
+    "Sex",
     "Suggestion",
     "SuggestionContext",
     "Weight",

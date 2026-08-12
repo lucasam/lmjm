@@ -161,8 +161,8 @@ export default function IntegratorWeeklyDataView() {
     { header: 'MAR', accessor: (r) => formatNumber(r.mar, 4) },
     { header: <>CAP<br />+2 origens<br />Creche</>, accessor: (r) => formatNumber(r.cap_1, 4) },
     { header: <>CAP<br />≤2 origens<br />Creche</>, accessor: (r) => formatNumber(r.cap_2, 4) },
-    { header: <>CAP<br />+2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_3, 4) },
-    { header: <>CAP<br />≤2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_4, 4) },
+    { header: <>CAP<br />+2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_4, 4) },
+    { header: <>CAP<br />≤2 origens<br />UPL</>, accessor: (r) => formatNumber(r.cap_3, 4) },
     { header: <>MAP<br />+2 origens</>, accessor: (r) => formatNumber(r.map_1, 4) },
     { header: <>MAP<br />≤2 origens</>, accessor: (r) => formatNumber(r.map_2, 4) },
   ];
@@ -385,8 +385,8 @@ export default function IntegratorWeeklyDataView() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', marginTop: '0.5rem', fontSize: '0.9rem' }}>
                     <span>CAP +2 origens (Creche): {formatNumber(preview.cap1, 4)}</span>
                     <span>CAP ≤2 origens (Creche): {formatNumber(preview.cap2, 4)}</span>
-                    <span>CAP +2 origens (UPL): {formatNumber(preview.cap3, 4)}</span>
-                    <span>CAP ≤2 origens (UPL): {formatNumber(preview.cap4, 4)}</span>
+                    <span>CAP +2 origens (UPL): {formatNumber(preview.cap4, 4)}</span>
+                    <span>CAP ≤2 origens (UPL): {formatNumber(preview.cap3, 4)}</span>
                     <span>MAP +2 origens: {formatNumber(preview.map1, 4)}</span>
                     <span>MAP ≤2 origens: {formatNumber(preview.map2, 4)}</span>
                   </div>

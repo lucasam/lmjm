@@ -27,11 +27,15 @@ pig_weight_st = st.decimals(min_value=80, max_value=130, places=2, allow_nan=Fal
 piglet_weight_st = st.decimals(min_value=5, max_value=30, places=2, allow_nan=False, allow_infinity=False)
 total_feed_st = st.decimals(min_value=10000, max_value=100000, places=2, allow_nan=False, allow_infinity=False)
 days_housed_st = st.integers(min_value=90, max_value=180)
-cap_st = st.decimals(min_value=Decimal("1.5"), max_value=Decimal("3.0"), places=4, allow_nan=False, allow_infinity=False)
-map_value_st = st.decimals(min_value=Decimal("1.0"), max_value=Decimal("5.0"), places=4, allow_nan=False, allow_infinity=False)
-price_per_kg_st = st.decimals(min_value=Decimal("3.0"), max_value=Decimal("10.0"), places=4, allow_nan=False, allow_infinity=False)
-piglet_adj_st = st.decimals(min_value=Decimal("-0.5"), max_value=Decimal("0.5"), places=4, allow_nan=False, allow_infinity=False)
-carcass_adj_st = st.decimals(min_value=Decimal("-0.5"), max_value=Decimal("0.5"), places=4, allow_nan=False, allow_infinity=False)
+cap_st = st.decimals(
+    min_value=Decimal("1.5"), max_value=Decimal("3.0"), places=4, allow_nan=False, allow_infinity=False
+)
+map_value_st = st.decimals(
+    min_value=Decimal("1.0"), max_value=Decimal("5.0"), places=4, allow_nan=False, allow_infinity=False
+)
+price_per_kg_st = st.decimals(
+    min_value=Decimal("3.0"), max_value=Decimal("10.0"), places=4, allow_nan=False, allow_infinity=False
+)
 
 
 @st.composite
@@ -47,8 +51,6 @@ def bordero_input_st(draw: st.DrawFn) -> BorderoInput:
     cap = draw(cap_st)
     map_value = draw(map_value_st)
     price_per_kg = draw(price_per_kg_st)
-    piglet_adjustment = draw(piglet_adj_st)
-    carcass_adjustment = draw(carcass_adj_st)
 
     return BorderoInput(
         housed_count=housed_count,
@@ -60,8 +62,6 @@ def bordero_input_st(draw: st.DrawFn) -> BorderoInput:
         cap=cap,
         map_value=map_value,
         price_per_kg=price_per_kg,
-        piglet_adjustment=piglet_adjustment,
-        carcass_adjustment=carcass_adjustment,
     )
 
 
@@ -80,119 +80,148 @@ def test_bordero_formula_correctness(inp: BorderoInput) -> None:
 
     **Validates: Requirements 2.1–2.16, 2.20**
     """
-    # Pre-compute total_carcass_produced to filter out invalid inputs
-    cyf = _q((inp.pig_weight - Decimal("6.629")) / Decimal("1.289"))
-    pcw = _q(inp.piglet_weight * cyf)
-    pig_cw = _q(inp.pig_weight * cyf)
+    # Pre-compute (full precision) to filter out invalid inputs
+    pig_cw_raw = (inp.pig_weight - Decimal("6.629")) / Decimal("1.289")
+    pcw_raw = inp.piglet_weight * Decimal("0.656807") - Decimal("1.315747")
     pig_count = inp.housed_count - inp.mortality_count
-    tcp = _q(pig_cw * pig_count) - _q(pcw * inp.housed_count)
-    assume(tcp > 0)
+    tcp_raw = pig_cw_raw * pig_count - pcw_raw * inp.housed_count
+    assume(_q(tcp_raw) > 0)
 
     result = calculate_bordero(inp)
 
     # Req 2.10: pig_count
     expected_pig_count = inp.housed_count - inp.mortality_count
-    assert result.pig_count == expected_pig_count, (
-        f"pig_count: {result.pig_count} != {expected_pig_count}"
-    )
+    assert result.pig_count == expected_pig_count, f"pig_count: {result.pig_count} != {expected_pig_count}"
 
-    # Req 2.1: carcass_yield_factor
-    expected_cyf = _q((inp.pig_weight - Decimal("6.629")) / Decimal("1.289"))
-    assert result.carcass_yield_factor == expected_cyf, (
-        f"carcass_yield_factor: {result.carcass_yield_factor} != {expected_cyf}"
-    )
+    # carcass_yield_factor = dressing ratio = pig_carcass_weight / pig_weight
+    expected_cyf = _q(pig_cw_raw / inp.pig_weight)
+    assert (
+        result.carcass_yield_factor == expected_cyf
+    ), f"carcass_yield_factor: {result.carcass_yield_factor} != {expected_cyf}"
 
-    # Req 2.2: piglet_carcass_weight
-    expected_pcw = _q(inp.piglet_weight * expected_cyf)
-    assert result.piglet_carcass_weight == expected_pcw, (
-        f"piglet_carcass_weight: {result.piglet_carcass_weight} != {expected_pcw}"
-    )
+    # piglet_carcass_weight = piglet_weight * 0.656807 - 1.315747
+    expected_pcw = _q(pcw_raw)
+    assert (
+        result.piglet_carcass_weight == expected_pcw
+    ), f"piglet_carcass_weight: {result.piglet_carcass_weight} != {expected_pcw}"
 
-    # Req 2.3: pig_carcass_weight
-    expected_pig_cw = _q(inp.pig_weight * expected_cyf)
-    assert result.pig_carcass_weight == expected_pig_cw, (
-        f"pig_carcass_weight: {result.pig_carcass_weight} != {expected_pig_cw}"
-    )
+    # pig_carcass_weight = (pig_weight - 6.629) / 1.289
+    expected_pig_cw = _q(pig_cw_raw)
+    assert (
+        result.pig_carcass_weight == expected_pig_cw
+    ), f"pig_carcass_weight: {result.pig_carcass_weight} != {expected_pig_cw}"
 
-    # Req 2.4: total_piglet_carcass
-    expected_tpc = _q(expected_pcw * inp.housed_count)
-    assert result.total_piglet_carcass == expected_tpc, (
-        f"total_piglet_carcass: {result.total_piglet_carcass} != {expected_tpc}"
-    )
+    # total_piglet_carcass
+    expected_tpc = _q(pcw_raw * inp.housed_count)
+    assert (
+        result.total_piglet_carcass == expected_tpc
+    ), f"total_piglet_carcass: {result.total_piglet_carcass} != {expected_tpc}"
 
-    # Req 2.5: total_pig_carcass
-    expected_tpigc = _q(expected_pig_cw * expected_pig_count)
-    assert result.total_pig_carcass == expected_tpigc, (
-        f"total_pig_carcass: {result.total_pig_carcass} != {expected_tpigc}"
-    )
+    # total_pig_carcass
+    expected_tpigc = _q(pig_cw_raw * expected_pig_count)
+    assert (
+        result.total_pig_carcass == expected_tpigc
+    ), f"total_pig_carcass: {result.total_pig_carcass} != {expected_tpigc}"
 
-    # Req 2.6: total_carcass_produced
-    expected_tcp = _q(expected_tpigc - expected_tpc)
-    assert result.total_carcass_produced == expected_tcp, (
-        f"total_carcass_produced: {result.total_carcass_produced} != {expected_tcp}"
-    )
+    # total_carcass_produced
+    expected_tcp = _q(tcp_raw)
+    assert (
+        result.total_carcass_produced == expected_tcp
+    ), f"total_carcass_produced: {result.total_carcass_produced} != {expected_tcp}"
 
-    # Req 2.7: real_conversion
-    expected_rc = _q(inp.total_feed / expected_tcp)
-    assert result.real_conversion == expected_rc, (
-        f"real_conversion: {result.real_conversion} != {expected_rc}"
-    )
+    # real_conversion (full-precision denominator)
+    expected_rc = _q(inp.total_feed / tcp_raw)
+    assert result.real_conversion == expected_rc, f"real_conversion: {result.real_conversion} != {expected_rc}"
 
-    # Req 2.8: adjusted_conversion
-    expected_ac = _q(expected_rc + inp.piglet_adjustment + inp.carcass_adjustment)
-    assert result.adjusted_conversion == expected_ac, (
-        f"adjusted_conversion: {result.adjusted_conversion} != {expected_ac}"
-    )
+    # piglet_adjustment = (22 - piglet_weight) * 0.0125 (computed)
+    piglet_adj_raw = (Decimal("22") - inp.piglet_weight) * Decimal("0.0125")
+    expected_pa = _q(piglet_adj_raw)
+    assert result.piglet_adjustment == expected_pa, f"piglet_adjustment: {result.piglet_adjustment} != {expected_pa}"
+
+    # carcass_adjustment = (85 - pig_carcass_weight) * 0.0095 (computed)
+    carcass_adj_raw = (Decimal("85") - pig_cw_raw) * Decimal("0.0095")
+    expected_ca = _q(carcass_adj_raw)
+    assert result.carcass_adjustment == expected_ca, f"carcass_adjustment: {result.carcass_adjustment} != {expected_ca}"
+
+    # adjusted_conversion = real_conversion + piglet_adjustment + carcass_adjustment (full precision)
+    expected_ac = _q(inp.total_feed / tcp_raw + piglet_adj_raw + carcass_adj_raw)
+    assert (
+        result.adjusted_conversion == expected_ac
+    ), f"adjusted_conversion: {result.adjusted_conversion} != {expected_ac}"
 
     # Req 2.9: real_mortality_pct
     expected_rmp = _q(Decimal(inp.mortality_count) / Decimal(inp.housed_count) * 100)
-    assert result.real_mortality_pct == expected_rmp, (
-        f"real_mortality_pct: {result.real_mortality_pct} != {expected_rmp}"
-    )
+    assert (
+        result.real_mortality_pct == expected_rmp
+    ), f"real_mortality_pct: {result.real_mortality_pct} != {expected_rmp}"
+
+    # adjusted_mortality = (130 - days_housed) * 0.0183 + real_mortality_pct
+    expected_amp = _q((Decimal("130") - Decimal(inp.days_housed)) * Decimal("0.0183") + expected_rmp)
+    assert (
+        result.adjusted_mortality == expected_amp
+    ), f"adjusted_mortality: {result.adjusted_mortality} != {expected_amp}"
+
+    # mortality_adjustment_pct = (map - adjusted_mortality) / 5
+    expected_map_adj = _q((inp.map_value - expected_amp) / Decimal("5"))
+    assert (
+        result.mortality_adjustment_pct == expected_map_adj
+    ), f"mortality_adjustment_pct: {result.mortality_adjustment_pct} != {expected_map_adj}"
+
+    # conversion_adjustment_pct = (cap - adjusted_conversion) * 10
+    expected_conv_adj = _q((inp.cap - expected_ac) * Decimal("10"))
+    assert (
+        result.conversion_adjustment_pct == expected_conv_adj
+    ), f"conversion_adjustment_pct: {result.conversion_adjustment_pct} != {expected_conv_adj}"
 
     # Req 2.11: daily_weight_gain
     expected_dwg = _q((inp.pig_weight - inp.piglet_weight) / Decimal(inp.days_housed))
-    assert result.daily_weight_gain == expected_dwg, (
-        f"daily_weight_gain: {result.daily_weight_gain} != {expected_dwg}"
-    )
+    assert result.daily_weight_gain == expected_dwg, f"daily_weight_gain: {result.daily_weight_gain} != {expected_dwg}"
 
-    # Req 2.12: daily_carcass_gain
+    # Req 2.12: daily_carcass_gain (uses quantized carcass weights)
     expected_dcg = _q((expected_pig_cw - expected_pcw) / Decimal(inp.days_housed))
-    assert result.daily_carcass_gain == expected_dcg, (
-        f"daily_carcass_gain: {result.daily_carcass_gain} != {expected_dcg}"
-    )
+    assert (
+        result.daily_carcass_gain == expected_dcg
+    ), f"daily_carcass_gain: {result.daily_carcass_gain} != {expected_dcg}"
 
     # Req 2.13: integrator_pct
-    expected_ip = _q(
-        Decimal("5.1") + result.mortality_adjustment_pct + result.conversion_adjustment_pct
-    )
-    assert result.integrator_pct == expected_ip, (
-        f"integrator_pct: {result.integrator_pct} != {expected_ip}"
-    )
+    expected_ip = _q(Decimal("5.1") + result.mortality_adjustment_pct + result.conversion_adjustment_pct)
+    assert result.integrator_pct == expected_ip, f"integrator_pct: {result.integrator_pct} != {expected_ip}"
 
     # Req 2.14: gross_income
     expected_gi = _q(expected_tcp * inp.price_per_kg * expected_ip / 100)
-    assert result.gross_income == expected_gi, (
-        f"gross_income: {result.gross_income} != {expected_gi}"
-    )
+    assert result.gross_income == expected_gi, f"gross_income: {result.gross_income} != {expected_gi}"
+
+    # net_income = gross_income * 0.985
+    expected_ni = _q(result.gross_income * Decimal("0.985"))
+    assert result.net_income == expected_ni, f"net_income: {result.net_income} != {expected_ni}"
 
     # Req 2.20: All Decimal output fields have at most 4 decimal places
     decimal_fields = [
-        result.carcass_yield_factor, result.piglet_carcass_weight,
-        result.pig_carcass_weight, result.total_piglet_carcass,
-        result.total_pig_carcass, result.total_carcass_produced,
-        result.real_conversion, result.adjusted_conversion,
-        result.real_mortality_pct, result.adjusted_mortality_pct,
-        result.daily_weight_gain, result.daily_carcass_gain,
-        result.mortality_adjustment_pct, result.conversion_adjustment_pct,
-        result.integrator_pct, result.gross_income, result.net_income,
-        result.gross_income_per_pig, result.net_income_per_pig,
+        result.carcass_yield_factor,
+        result.piglet_carcass_weight,
+        result.pig_carcass_weight,
+        result.total_piglet_carcass,
+        result.total_pig_carcass,
+        result.total_carcass_produced,
+        result.real_conversion,
+        result.adjusted_conversion,
+        result.real_mortality_pct,
+        result.adjusted_mortality,
+        result.daily_weight_gain,
+        result.daily_carcass_gain,
+        result.mortality_adjustment_pct,
+        result.conversion_adjustment_pct,
+        result.integrator_pct,
+        result.gross_income,
+        result.net_income,
+        result.gross_income_per_pig,
+        result.net_income_per_pig,
     ]
     for field_val in decimal_fields:
         _, _, exponent = field_val.as_tuple()
-        assert isinstance(exponent, int) and exponent >= -4, (
-            f"Decimal field has more than 4 decimal places: {field_val}"
-        )
+        assert (
+            isinstance(exponent, int) and exponent >= -4
+        ), f"Decimal field has more than 4 decimal places: {field_val}"
 
 
 # Feature: batch-financial-result, Property 2: Borderô round-trip serialization
@@ -212,12 +241,11 @@ def test_bordero_round_trip_serialization(inp: BorderoInput) -> None:
     from lmjm.util.marshmallow_serializer import load_data_class_from_dict, serialize_to_dict
 
     # Filter out inputs where total_carcass_produced <= 0
-    cyf = _q((inp.pig_weight - Decimal("6.629")) / Decimal("1.289"))
-    pcw = _q(inp.piglet_weight * cyf)
-    pig_cw = _q(inp.pig_weight * cyf)
+    pig_cw_raw = (inp.pig_weight - Decimal("6.629")) / Decimal("1.289")
+    pcw_raw = inp.piglet_weight * Decimal("0.656807") - Decimal("1.315747")
     pig_count = inp.housed_count - inp.mortality_count
-    tcp = _q(pig_cw * pig_count) - _q(pcw * inp.housed_count)
-    assume(tcp > 0)
+    tcp_raw = pig_cw_raw * pig_count - pcw_raw * inp.housed_count
+    assume(_q(tcp_raw) > 0)
 
     original = calculate_bordero(inp)
     serialized = serialize_to_dict(original)
@@ -249,7 +277,7 @@ def test_bordero_round_trip_serialization(inp: BorderoInput) -> None:
     assert deserialized.daily_weight_gain == original.daily_weight_gain
     assert deserialized.daily_carcass_gain == original.daily_carcass_gain
     assert deserialized.real_mortality_pct == original.real_mortality_pct
-    assert deserialized.adjusted_mortality_pct == original.adjusted_mortality_pct
+    assert deserialized.adjusted_mortality == original.adjusted_mortality
     assert deserialized.mortality_adjustment_pct == original.mortality_adjustment_pct
     assert deserialized.conversion_adjustment_pct == original.conversion_adjustment_pct
     assert deserialized.integrator_pct == original.integrator_pct
